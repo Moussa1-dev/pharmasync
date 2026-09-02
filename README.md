@@ -124,3 +124,4 @@ Copiez `.env.example` vers `.env` pour personnaliser les variables (JWT, Postgre
 - [Résumé exécutif](RESUME_PROJET.md)
 - [README Frontend](frontend/README.md)
 # gestion-pharmace
+# gestion-pharmace
