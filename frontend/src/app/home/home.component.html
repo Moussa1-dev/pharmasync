@@ -1,0 +1,126 @@
+<div class="home-page">
+  <section class="hero animate-fade-in">
+    <div class="hero-glow hero-glow-a" aria-hidden="true"></div>
+    <div class="hero-glow hero-glow-b" aria-hidden="true"></div>
+    <div class="hero-orb" aria-hidden="true"></div>
+
+    <div class="hero-stage">
+      <div class="hero-brand">
+        <img src="assets/logo-pharmasync.svg" alt="Logo PharmaSync" class="hero-logo" />
+        <span class="hero-brand-name text-gradient-animate">Pharma<span>Sync</span></span>
+      </div>
+
+      <h1 class="hero-title">Trouvez votre médicament <em>en quelques secondes</em></h1>
+      <p class="hero-subtitle">Localisez les pharmacies près de vous, vérifiez les stocks et réservez en toute simplicité.</p>
+
+      <div class="search-box">
+        <i class="fa-solid fa-magnifying-glass search-icon"></i>
+        <input type="text" class="input-field" placeholder="Ex. Doliprane, Coartem, Amoxicilline..." [(ngModel)]="searchQuery" (keyup.enter)="goToSearch()">
+        <button class="btn btn-primary" (click)="goToSearch()">Rechercher</button>
+      </div>
+
+      <div class="hero-actions">
+        <button class="btn btn-secondary" routerLink="/search">
+          <i class="fa-solid fa-location-dot"></i> Pharmacies à proximité
+        </button>
+        <button class="btn btn-secondary" routerLink="/login" [queryParams]="{ returnUrl: '/dashboard' }">
+          <i class="fa-solid fa-user-doctor"></i> Espace pharmacien
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <section class="home-section">
+    <div class="stats-grid">
+      <div class="stat-card glass-panel animate-fade-in stagger-1">
+        <div class="stat-header">
+          <div class="stat-icon"><i class="fa-solid fa-hospital"></i></div>
+          <div>
+            <div class="stat-label">Pharmacies</div>
+            <div class="stat-value">6</div>
+          </div>
+        </div>
+      </div>
+      <div class="stat-card glass-panel animate-fade-in stagger-2">
+        <div class="stat-header">
+          <div class="stat-icon icon-cyan"><i class="fa-solid fa-capsules"></i></div>
+          <div>
+            <div class="stat-label">Médicaments</div>
+            <div class="stat-value">10+</div>
+          </div>
+        </div>
+      </div>
+      <div class="stat-card glass-panel animate-fade-in stagger-3">
+        <div class="stat-header">
+          <div class="stat-icon icon-amber"><i class="fa-solid fa-bolt"></i></div>
+          <div>
+            <div class="stat-label">Temps gagné</div>
+            <div class="stat-value">-70%</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="home-section">
+    <div class="section-intro">
+      <span class="section-tag">Fonctionnalités</span>
+      <h2>Tout ce dont vous avez besoin</h2>
+      <p class="section-lead">Recherche, stocks et ventes réunis dans une expérience fluide.</p>
+    </div>
+    <div class="feature-strip">
+      <article class="feature-card glass-panel animate-fade-in stagger-1">
+        <span class="feature-icon"><i class="fa-solid fa-magnifying-glass-location"></i></span>
+        <h3>Recherche intelligente</h3>
+        <p>Trouvez instantanément un médicament disponible près de chez vous.</p>
+      </article>
+      <article class="feature-card glass-panel animate-fade-in stagger-2">
+        <span class="feature-icon"><i class="fa-solid fa-boxes-stacked"></i></span>
+        <h3>Gestion des stocks</h3>
+        <p>Alertes de rupture, péremption et suivi des réapprovisionnements.</p>
+      </article>
+      <article class="feature-card glass-panel animate-fade-in stagger-3">
+        <span class="feature-icon"><i class="fa-solid fa-clipboard-check"></i></span>
+        <h3>Réservations & ventes</h3>
+        <p>Réservez en ligne et gérez le point de vente en un seul outil.</p>
+      </article>
+    </div>
+  </section>
+
+  <section class="info-panel home-section">
+    <div class="panel-copy animate-fade-in">
+      <span class="section-tag">Pourquoi PharmaSync ?</span>
+      <h2>Une plateforme pensée pour N'Djamena et ses pharmacies.</h2>
+      <p>Recherche, géolocalisation et gestion des stocks réunies pour réduire les déplacements inutiles et accélérer l'accès aux médicaments essentiels.</p>
+      <ul class="check-list">
+        <li><a routerLink="/search" [queryParams]="{ garde: 1 }"><i class="fa-solid fa-check"></i> Pharmacies de garde visibles en un clic</a></li>
+        <li><a routerLink="/search"><i class="fa-solid fa-check"></i> Itinéraire vers la pharmacie la plus proche</a></li>
+        <li><a routerLink="/dashboard"><i class="fa-solid fa-check"></i> Tableau de bord pharmacien complet</a></li>
+        <li><a routerLink="/pos"><i class="fa-solid fa-check"></i> Point de vente avec facture PDF</a></li>
+      </ul>
+    </div>
+    <div class="mini-showcase glass-panel animate-fade-in stagger-2">
+      <div class="mini-card accent">
+        <span class="mini-title">Alertes</span>
+        <strong>Temps réel</strong>
+        <small>stocks & péremptions</small>
+      </div>
+      <div class="mini-card">
+        <span class="mini-title">Carte</span>
+        <strong>GPS</strong>
+        <small>localisation précise</small>
+      </div>
+    </div>
+  </section>
+
+  <section class="cta-panel animate-fade-in">
+    <div>
+      <span class="section-tag light">Prêt à commencer ?</span>
+      <h3>Explorez les pharmacies et réservez dès maintenant.</h3>
+    </div>
+    <button class="btn cta-btn" routerLink="/search">
+      Lancer une recherche
+      <i class="fa-solid fa-arrow-right"></i>
+    </button>
+  </section>
+</div>

@@ -1,5 +1,7 @@
 package com.gestion.pharmacy.controller;
 
+import com.gestion.pharmacy.service.StockAlertScheduler;
+import com.gestion.pharmacy.security.PharmacyAccessService;
 import com.gestion.pharmacy.dto.SaleRequestDTO;
 import com.gestion.pharmacy.entity.Medication;
 import com.gestion.pharmacy.entity.Pharmacy;
@@ -23,6 +25,12 @@ import java.util.Optional;
 public class SaleController {
 
     @Autowired
+    private PharmacyAccessService pharmacyAccessService;
+
+    @Autowired
+    private StockAlertScheduler stockAlertScheduler;
+
+    @Autowired
     private SaleRepository saleRepository;
 
     @Autowired
@@ -36,6 +44,15 @@ public class SaleController {
 
     @PostMapping
     public ResponseEntity<?> createSale(@RequestBody SaleRequestDTO request) {
+        if (request.getPharmacyId() == null) {
+            return ResponseEntity.badRequest().body("Pharmacie manquante");
+        }
+        if (request.getQuantity() == null || request.getQuantity() <= 0) {
+            return ResponseEntity.badRequest().body("La quantité doit être supérieure à zéro");
+        }
+        if (!pharmacyAccessService.canManage(request.getPharmacyId())) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Vous ne gérez pas cette pharmacie");
+        }
         Optional<Pharmacy> pharmacyOpt = pharmacyRepository.findById(request.getPharmacyId());
         if (pharmacyOpt.isEmpty()) {
             return ResponseEntity.badRequest().body("Pharmacy not found");
@@ -49,9 +66,13 @@ public class SaleController {
             stock = stockRepository.findByPharmacyIdAndMedicationIdAndLotNumber(
                     pharmacy.getId(), request.getMedicationId(), request.getLotNumber()).orElse(null);
         } else if (request.getMedicationId() != null) {
-            stock = stockRepository.findByPharmacyIdAndMedicationId(pharmacy.getId(), request.getMedicationId()).orElse(null);
+            stock = stockRepository.findFirstByPharmacyIdAndMedicationIdAndQuantityGreaterThanOrderByExpirationDateAsc(
+                    pharmacy.getId(), request.getMedicationId(), 0).orElse(null);
         }
 
+        if (stock != null && (stock.getPharmacy() == null || !pharmacy.getId().equals(stock.getPharmacy().getId()))) {
+            return ResponseEntity.badRequest().body("Ce stock n'appartient pas à cette pharmacie");
+        }
         if (stock == null || stock.getQuantity() == null || stock.getQuantity() < request.getQuantity()) {
             return ResponseEntity.badRequest().body("Insufficient stock");
         }
@@ -66,6 +87,7 @@ public class SaleController {
 
         stock.setQuantity(stock.getQuantity() - request.getQuantity());
         stockRepository.save(stock);
+        stockAlertScheduler.checkStock(stock); // alerte en temps réel
 
         Sale sale = new Sale();
         sale.setPharmacy(pharmacy);

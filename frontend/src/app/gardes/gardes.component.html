@@ -1,0 +1,76 @@
+<div class="gardes-page animate-fade-in">
+  <div class="gardes-hero glass-panel">
+    <div>
+      <span class="mini-label">Planning</span>
+      <h2>Gardes nuit & week-end</h2>
+      <p>Calendrier des pharmacies de garde de toute la ville. Le statut « de garde » se met à jour automatiquement selon les créneaux.</p>
+      <p *ngIf="auth.isPharmacistOrAdmin()"><strong>Pharmacie active :</strong> {{ auth.getActivePharmacyName() }}</p>
+    </div>
+    <div class="oncall-now" *ngIf="onCallNow.length">
+      <strong>De garde maintenant</strong>
+      <ul>
+        <li *ngFor="let p of onCallNow">{{ p.name }}</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="week-nav glass-panel">
+    <button class="btn btn-secondary" (click)="prevWeek()">← Semaine préc.</button>
+    <strong>Semaine du {{ weekStart | date:'dd/MM/yyyy' }}</strong>
+    <button class="btn btn-secondary" (click)="nextWeek()">Semaine suiv. →</button>
+  </div>
+
+  <div class="calendar-grid" *ngIf="!loading">
+    <div class="day-col glass-panel" *ngFor="let day of weekDays()" [class.weekend]="day.getDay() === 0 || day.getDay() === 6">
+      <div class="day-head">
+        <strong>{{ day | date:'EEEE' }}</strong>
+        <span>{{ day | date:'dd/MM' }}</span>
+      </div>
+      <div class="duty-card" *ngFor="let s of schedulesFor(day)" [attr.data-shift]="s.shiftType">
+        <div class="duty-type">{{ shiftLabel(s.shiftType) }}</div>
+        <div class="duty-pharma">{{ s.pharmacyName }}</div>
+        <div class="duty-hours">{{ s.startTime }} → {{ s.endTime }}</div>
+        <div class="duty-notes" *ngIf="s.notes">{{ s.notes }}</div>
+        <button class="link-danger" (click)="remove(s.id)">Supprimer</button>
+      </div>
+      <div class="empty-day" *ngIf="schedulesFor(day).length === 0">Aucune garde</div>
+    </div>
+  </div>
+
+  <form class="add-form glass-panel" (ngSubmit)="save()">
+    <h3>Ajouter une garde</h3>
+    <div class="form-grid">
+      <div class="form-group">
+        <label>Pharmacie</label>
+        <select class="input-field" [(ngModel)]="form.pharmacyId" name="pharmacyId">
+          <option *ngFor="let p of pharmacies" [ngValue]="p.id">{{ p.name }}</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Date</label>
+        <input type="date" class="input-field" [(ngModel)]="form.dutyDate" name="dutyDate">
+      </div>
+      <div class="form-group">
+        <label>Type</label>
+        <select class="input-field" [(ngModel)]="form.shiftType" name="shiftType" (change)="onShiftChange()">
+          <option value="JOUR">Jour</option>
+          <option value="NUIT">Nuit</option>
+          <option value="WEEKEND">Week-end</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Début</label>
+        <input type="time" class="input-field" [(ngModel)]="form.startTime" name="startTime">
+      </div>
+      <div class="form-group">
+        <label>Fin</label>
+        <input type="time" class="input-field" [(ngModel)]="form.endTime" name="endTime">
+      </div>
+      <div class="form-group">
+        <label>Notes</label>
+        <input type="text" class="input-field" [(ngModel)]="form.notes" name="notes" placeholder="Optionnel">
+      </div>
+    </div>
+    <button type="submit" class="btn btn-primary">Enregistrer la garde</button>
+  </form>
+</div>

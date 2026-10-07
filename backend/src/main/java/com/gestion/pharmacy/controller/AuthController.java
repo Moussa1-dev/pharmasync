@@ -57,6 +57,18 @@ public class AuthController {
     @Autowired
     com.gestion.pharmacy.service.NotificationService notificationService;
 
+    /** Profil actif : en "dev" (démo / soutenance), les liens d'e-mail sont renvoyés à l'écran. */
+    @org.springframework.beans.factory.annotation.Value("${spring.profiles.active:dev}")
+    String activeProfile;
+
+    /** Adresse du frontend (FRONTEND_URL en ligne) pour les liens envoyés par e-mail */
+    @org.springframework.beans.factory.annotation.Value("${pharmasync.frontend-url:http://localhost:4200}")
+    String[] frontendUrls;
+
+    private boolean isDemo() {
+        return activeProfile == null || activeProfile.contains("dev");
+    }
+
 
     @PostMapping("/signin")
     public ResponseEntity<?> authenticateUser(@RequestBody LoginRequest loginRequest) {
@@ -115,6 +127,16 @@ public class AuthController {
 
     @PostMapping("/signup")
     public ResponseEntity<?> registerUser(@RequestBody SignupRequest signUpRequest) {
+        if (signUpRequest.getEmail() == null || !signUpRequest.getEmail().contains("@")) {
+            return ResponseEntity.badRequest().body(Map.of("message", "Adresse e-mail invalide."));
+        }
+        if (signUpRequest.getPassword() == null || signUpRequest.getPassword().length() < 6) {
+            return ResponseEntity.badRequest().body(Map.of("message", "Le mot de passe doit contenir au moins 6 caractères."));
+        }
+        if (signUpRequest.getNom() == null || signUpRequest.getNom().isBlank()) {
+            return ResponseEntity.badRequest().body(Map.of("message", "Le nom est obligatoire."));
+        }
+        signUpRequest.setEmail(signUpRequest.getEmail().trim());
         if (userRepository.existsByEmail(signUpRequest.getEmail())) {
             return ResponseEntity.badRequest().body("Error: Email is already in use!");
         }
@@ -132,12 +154,18 @@ public class AuthController {
 
         userRepository.save(user);
         
-        String verifyLink = "http://localhost:4200/login?verify=" + user.getVerificationToken();
+        String verifyLink = frontendUrls[0] + "/login?verify=" + user.getVerificationToken();
         notificationService.notify(user.getEmail(), "Vérification de votre compte PharmaSync", 
             "Cliquez sur ce lien pour vérifier votre compte : " + verifyLink, "SYSTEM", null);
 
         auditLogRepository.save(new com.gestion.pharmacy.entity.AuditLog(user.getEmail(), "SIGNUP", "User registered"));
-        return ResponseEntity.ok(Map.of("message", "Inscription réussie ! Veuillez vérifier votre e-mail pour activer votre compte."));
+        Map<String, Object> body = new java.util.HashMap<>();
+        body.put("message", "Inscription réussie ! Veuillez vérifier votre e-mail pour activer votre compte.");
+        if (isDemo()) {
+            // Démo : pas de vrai serveur d'e-mail, le lien d'activation est renvoyé à l'écran
+            body.put("verifyToken", user.getVerificationToken());
+        }
+        return ResponseEntity.ok(body);
     }
 
     @GetMapping("/verify-email")
@@ -154,10 +182,11 @@ public class AuthController {
 
     @PostMapping("/forgot-password")
     public ResponseEntity<?> forgotPassword(@RequestBody Map<String, String> request) {
-        String email = request.get("email");
+        String email = request.get("email") == null ? "" : request.get("email").trim();
         User user = userRepository.findByEmail(email).orElse(null);
         if (user == null) {
-            return ResponseEntity.badRequest().body("Utilisateur non trouvé");
+            // Même réponse que si le compte existe : on ne révèle pas quels e-mails sont inscrits
+            return ResponseEntity.ok(Map.of("message", "Si ce compte existe, un lien a été envoyé à votre adresse e-mail."));
         }
 
         tokenRepository.deleteByUser(user);
@@ -165,17 +194,25 @@ public class AuthController {
         tokenRepository.save(resetToken);
 
         // Simulation d'envoi d'email
-        String resetLink = "http://localhost:4200/reset-password?token=" + resetToken.getToken();
+        String resetLink = frontendUrls[0] + "/reset-password?token=" + resetToken.getToken();
         notificationService.notify(email, "Réinitialisation de mot de passe", "Lien : " + resetLink, "SYSTEM", null);
         auditLogRepository.save(new com.gestion.pharmacy.entity.AuditLog(email, "FORGOT_PASSWORD", "Reset token generated"));
 
-        return ResponseEntity.ok(Map.of("message", "Un lien a été envoyé à votre adresse e-mail."));
+        Map<String, Object> body = new java.util.HashMap<>();
+        body.put("message", "Si ce compte existe, un lien a été envoyé à votre adresse e-mail.");
+        if (isDemo()) {
+            body.put("resetToken", resetToken.getToken());
+        }
+        return ResponseEntity.ok(body);
     }
 
     @PostMapping("/reset-password")
     public ResponseEntity<?> resetPassword(@RequestBody Map<String, String> request) {
         String token = request.get("token");
         String newPassword = request.get("password");
+        if (newPassword == null || newPassword.length() < 6) {
+            return ResponseEntity.badRequest().body("Le mot de passe doit contenir au moins 6 caractères.");
+        }
 
         com.gestion.pharmacy.entity.PasswordResetToken resetToken = tokenRepository.findByToken(token).orElse(null);
         if (resetToken == null || resetToken.getExpiryDate().isBefore(LocalDateTime.now())) {

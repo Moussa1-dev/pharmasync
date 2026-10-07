@@ -1,0 +1,101 @@
+<div class="pos-container">
+  <div class="header">
+    <h2><i class="fa fa-shopping-cart"></i> Point de Vente - {{ pharmacyName }}</h2>
+    <p>Scanner un code-barres / QR, enregistrer une vente et générer une facture.</p>
+  </div>
+
+  <div class="pos-layout">
+    <!-- Left Side: Product List -->
+    <div class="products-section card">
+      <div class="card-header">
+        <h3>Produits en Stock</h3>
+        <div class="scan-row">
+          <input
+            type="text"
+            class="form-control barcode-input"
+            placeholder="Scanner ou saisir un code-barres…"
+            [(ngModel)]="barcodeInput"
+            (keyup.enter)="onBarcodeEnter()"
+            autofocus>
+          <button type="button" class="btn btn-primary scan-btn" (click)="toggleCameraScanner()">
+            <i class="fa" [class.fa-camera]="!scannerActive" [class.fa-stop]="scannerActive"></i>
+            {{ scannerActive ? 'Stop caméra' : 'Caméra QR' }}
+          </button>
+        </div>
+        <div id="pos-qr-reader" class="qr-reader" [class.active]="scannerActive"></div>
+        <input
+          type="text"
+          class="form-control"
+          placeholder="Rechercher un médicament..."
+          [(ngModel)]="searchQuery"
+          (input)="filterStocks()">
+        <small class="scan-hint">Astuce démo : code Doliprane = <code>3400930000002</code></small>
+      </div>
+      <div class="card-body">
+        <div class="products-grid">
+          <div class="product-card" *ngFor="let stock of filteredStocks" (click)="addToCart(stock)" [class.out-of-stock]="stock.quantity === 0">
+            <div class="product-name">{{ stock.medication.name }}</div>
+            <div class="product-price">{{ stock.medication.indicativePrice || 0 }} FCFA</div>
+            <div class="product-stock" [class.text-danger]="stock.quantity < 5">
+              Stock: {{ stock.quantity }}
+            </div>
+            <div class="product-barcode" *ngIf="stock.medication.barcode">{{ stock.medication.barcode }}</div>
+            <div class="product-barcode" *ngIf="stock.lotNumber">Lot {{ stock.lotNumber }}</div>
+          </div>
+
+          <div *ngIf="filteredStocks.length === 0" class="no-products">
+            Aucun médicament trouvé.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Side: Cart -->
+    <div class="cart-section card">
+      <div class="card-header">
+        <h3>Panier</h3>
+      </div>
+      <div class="card-body cart-body">
+
+        <div class="customer-info mb-3">
+          <label>Nom du client (Optionnel) :</label>
+          <input type="text" class="form-control" placeholder="Ex: Jean Dupont" [(ngModel)]="customerName">
+        </div>
+
+        <div class="cart-items">
+          <div class="cart-item" *ngFor="let item of cart">
+            <div class="item-info">
+              <strong>{{ item.medication.name }}</strong>
+              <div class="item-price">{{ item.medication.indicativePrice || 0 }} FCFA</div>
+            </div>
+            <div class="item-quantity">
+              <button class="btn btn-sm btn-outline-secondary" (click)="decreaseQuantity(item)">-</button>
+              <span class="qty">{{ item.cartQuantity }}</span>
+              <button class="btn btn-sm btn-outline-secondary" (click)="increaseQuantity(item)">+</button>
+            </div>
+            <div class="item-total">
+              {{ (item.medication.indicativePrice || 0) * item.cartQuantity }} FCFA
+            </div>
+            <button class="btn btn-sm btn-danger remove-btn" (click)="removeFromCart(item)">
+              <i class="fa fa-trash"></i>
+            </button>
+          </div>
+
+          <div *ngIf="cart.length === 0" class="empty-cart">
+            Le panier est vide.
+          </div>
+        </div>
+      </div>
+
+      <div class="card-footer">
+        <div class="total-row">
+          <h4>Total à payer:</h4>
+          <h4 class="text-primary">{{ getTotal() }} FCFA</h4>
+        </div>
+        <button class="btn btn-success btn-lg w-100" [disabled]="cart.length === 0" (click)="processSale()">
+          <i class="fa fa-check-circle"></i> Valider et Générer Facture
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

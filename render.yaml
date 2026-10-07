@@ -1,0 +1,31 @@
+# ============================================================
+#  Déploiement Render en un clic (Blueprint) : New > Blueprint
+#  - pharmasync-api : le serveur Java (Docker), base de démonstration H2
+#  - pharmasync-web : le site Angular (site statique)
+# ============================================================
+services:
+  - type: web
+    name: pharmasync-api
+    runtime: docker
+    rootDir: backend
+    dockerfilePath: ./Dockerfile
+    plan: free
+    healthCheckPath: /api/pharmacy
+    envVars:
+      - key: SPRING_PROFILES_ACTIVE
+        value: dev            # base de démonstration H2 (n'expire jamais)
+      - key: JWT_SECRET
+        generateValue: true   # clé secrète générée par Render
+      - key: FRONTEND_URL
+        value: https://pharmasync-web.onrender.com
+
+  - type: web
+    name: pharmasync-web
+    runtime: static
+    rootDir: frontend
+    buildCommand: npm ci && npx ng build
+    staticPublishPath: dist/frontend/browser
+    routes:
+      - type: rewrite        # toutes les pages Angular -> index.html
+        source: /*
+        destination: /index.html

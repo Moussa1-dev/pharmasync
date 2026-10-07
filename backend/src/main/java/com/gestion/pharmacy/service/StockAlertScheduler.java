@@ -11,10 +11,19 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
+/**
+ * Alertes de stock bas / rupture et de péremption proche.
+ *
+ * - En TEMPS RÉEL : checkStock(stock) est appelé juste après chaque
+ *   modification de stock (mise à jour, ajout, import CSV, vente, réservation).
+ *   L'alerte part immédiatement par WebSocket vers la pharmacie.
+ * - En filet de sécurité : une vérification complète au démarrage
+ *   puis toutes les 30 minutes.
+ */
 @Service
 @RequiredArgsConstructor
 public class StockAlertScheduler {
@@ -23,7 +32,9 @@ public class StockAlertScheduler {
     private final RestockAlertService restockAlertService;
     private final NotificationService notificationService;
     private static final Logger logger = LoggerFactory.getLogger(StockAlertScheduler.class);
-    private final Set<String> alreadyNotified = new HashSet<>();
+
+    /** Alertes déjà envoyées (partagé entre les requêtes : ensemble thread-safe) */
+    private final Set<String> alreadyNotified = ConcurrentHashMap.newKeySet();
 
     /** Au démarrage pour la démo / soutenance */
     @EventListener(ApplicationReadyEvent.class)
@@ -31,44 +42,54 @@ public class StockAlertScheduler {
         checkStockAlerts();
     }
 
-    /** Vérifie les stocks bas et péremptions toutes les 30 minutes */
+    /** Vérification complète toutes les 30 minutes (filet de sécurité) */
     @Scheduled(fixedRate = 1800000)
     public void checkStockAlerts() {
         logger.info("Vérification des alertes stock / péremption");
         List<Stock> all = stockRepository.findAll();
-        List<Stock> low = restockAlertService.buildAlerts(all);
-        LocalDate limit = LocalDate.now().plusMonths(3);
+        for (Stock stock : all) {
+            checkStock(stock);
+        }
+    }
 
-        for (Stock stock : low) {
-            Long pharmacyId = stock.getPharmacy().getId();
+    /** Vérifie UN stock et envoie tout de suite les alertes nécessaires. */
+    public void checkStock(Stock stock) {
+        if (stock == null || stock.getPharmacy() == null || stock.getMedication() == null) {
+            return;
+        }
+        Long pharmacyId = stock.getPharmacy().getId();
+        String medName = stock.getMedication().getName();
+
+        // 1. Stock bas ou rupture (même seuil que RestockAlertService)
+        if (!restockAlertService.buildAlerts(List.of(stock)).isEmpty()) {
             String key = "low:" + pharmacyId + ":" + stock.getId() + ":" + stock.getQuantity();
-            if (alreadyNotified.contains(key)) continue;
-            alreadyNotified.add(key);
-
-            notificationService.notify(
-                    "pharmacy:" + pharmacyId,
-                    "Stock bas : " + stock.getMedication().getName(),
-                    stock.getQuantity() + " unité(s) restante(s). Commandez un réapprovisionnement.",
-                    "STOCK",
-                    "/orders?medication=" + stock.getMedication().getName() + "&qty=" + Math.max(50, 100 - stock.getQuantity())
-            );
+            if (alreadyNotified.add(key)) {
+                boolean rupture = stock.getQuantity() <= 0;
+                notificationService.notify(
+                        "pharmacy:" + pharmacyId,
+                        (rupture ? "Rupture de stock : " : "Stock bas : ") + medName,
+                        rupture
+                                ? "Plus aucune unité disponible. Commandez un réapprovisionnement."
+                                : stock.getQuantity() + " unité(s) restante(s). Commandez un réapprovisionnement.",
+                        "STOCK",
+                        "/orders?medication=" + medName + "&qty=" + Math.max(50, 100 - stock.getQuantity())
+                );
+            }
         }
 
-        for (Stock stock : all) {
-            if (stock.getExpirationDate() == null) continue;
-            if (stock.getExpirationDate().isAfter(limit)) continue;
-            Long pharmacyId = stock.getPharmacy().getId();
+        // 2. Péremption dans les 3 prochains mois
+        LocalDate limit = LocalDate.now().plusMonths(3);
+        if (stock.getExpirationDate() != null && !stock.getExpirationDate().isAfter(limit)) {
             String key = "exp:" + pharmacyId + ":" + stock.getId() + ":" + stock.getExpirationDate();
-            if (alreadyNotified.contains(key)) continue;
-            alreadyNotified.add(key);
-
-            notificationService.notify(
-                    "pharmacy:" + pharmacyId,
-                    "Péremption proche : " + stock.getMedication().getName(),
-                    "Expire le " + stock.getExpirationDate() + ". Vérifiez le lot.",
-                    "STOCK",
-                    "/dashboard?tab=expiring"
-            );
+            if (alreadyNotified.add(key)) {
+                notificationService.notify(
+                        "pharmacy:" + pharmacyId,
+                        "Péremption proche : " + medName,
+                        "Expire le " + stock.getExpirationDate() + ". Vérifiez le lot.",
+                        "STOCK",
+                        "/dashboard?tab=expiring"
+                );
+            }
         }
     }
 }

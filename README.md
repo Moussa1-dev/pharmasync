@@ -90,6 +90,9 @@ L'application web sera disponible sur `http://localhost:4200`.
 ### 3️⃣ PostgreSQL avec Docker (profil prod)
 ```bash
 docker compose up -d
+# Premier lancement uniquement (charge les données de démonstration) :
+SPRING_PROFILES_ACTIVE=prod SQL_INIT_MODE=always ./mvnw spring-boot:run -f backend/pom.xml
+# Lancements suivants :
 SPRING_PROFILES_ACTIVE=prod ./mvnw spring-boot:run -f backend/pom.xml
 ```
 
@@ -98,7 +101,7 @@ SPRING_PROFILES_ACTIVE=prod ./mvnw spring-boot:run -f backend/pom.xml
 | Rôle | Email | Mot de passe | Accès |
 |------|-------|--------------|-------|
 | **Administrateur** | `admin@pharmasync.com` | `admin123` | Gestion pharmacies, catalogue |
-| **Pharmacien** | `contact@pharmasalut.td` | `pharma123` | Dashboard, stocks, POS |
+| **Pharmacien** | `pharmacien@pharmasync.com` | `pharma123` | Dashboard, stocks, POS |
 | **Patient** | `patient@gmail.com` | `patient123` | Recherche, réservations |
 
 ### 📁 Structure du projet

@@ -1,0 +1,539 @@
+<div class="dashboard animate-fade-in">
+  <h2>{{ pageTitle }} - {{ activePharmacyName }}</h2>
+  <p class="subtitle">{{ pageSubtitle }}</p>
+
+  <!-- Vue d'ensemble : uniquement sur "Tableau de bord" (pas sur Stocks / Réservations) -->
+  <ng-container *ngIf="!focus">
+
+  <div class="stats-grid" style="grid-template-columns: repeat(5, 1fr);">
+    <div class="stat-card glass-panel hover-glow animate-fade-in stagger-1">
+      <div class="stat-header">
+        <span class="stat-icon">📦</span>
+        <div class="stat-label">Unités en Stock</div>
+      </div>
+      <div class="stat-value">{{ totalStock }}</div>
+    </div>
+    <div class="stat-card glass-panel warning hover-glow animate-fade-in stagger-2">
+      <div class="stat-header">
+        <span class="stat-icon">⚠️</span>
+        <div class="stat-label">En Alerte</div>
+      </div>
+      <div class="stat-value">{{ alertes }}</div>
+    </div>
+    <div class="stat-card glass-panel danger hover-glow animate-fade-in stagger-3">
+      <div class="stat-header">
+        <span class="stat-icon">🚨</span>
+        <div class="stat-label">En Rupture</div>
+      </div>
+      <div class="stat-value">{{ ruptures }}</div>
+    </div>
+    <div class="stat-card glass-panel hover-glow animate-fade-in stagger-4" style="border-left: 4px solid var(--accent);">
+      <div class="stat-header">
+        <span class="stat-icon">🧾</span>
+        <div class="stat-label">Réservations en attente</div>
+      </div>
+      <div class="stat-value">{{ pendingReservations }}</div>
+    </div>
+    <div class="stat-card glass-panel hover-glow animate-fade-in stagger-5" style="border-left: 4px solid var(--primary);">
+      <div class="stat-header">
+        <span class="stat-icon">💶</span>
+        <div class="stat-label">CA (Livré)</div>
+      </div>
+      <div class="stat-value">{{ totalRevenue | number:'1.2-2' }} FCFA</div>
+    </div>
+  </div>
+
+  <div class="alert-banner danger animate-fade-in pulse-glow" *ngIf="expiringStocks.length > 0" style="margin-bottom: 2rem; padding: 1rem; border-radius: 8px; background: rgba(239, 68, 68, 0.2); border: 1px solid rgba(239, 68, 68, 0.5); display: flex; align-items: center; gap: 1rem; position: relative;">
+    <span style="font-size: 1.5rem;">⏳</span>
+    <div>
+      <strong>Alerte Péremption :</strong> Vous avez {{ expiringStocks.length }} médicament(s) qui périment dans moins de 3 mois. Veuillez consulter l'onglet "Péremptions".
+    </div>
+  </div>
+
+
+  <div class="glass-panel" style="margin-bottom: 2rem; padding: 1rem 1.25rem; border-radius: 16px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap;">
+      <div>
+        <strong>Réapprovisionnement rapide</strong>
+        <p style="margin: 0.25rem 0 0; color: var(--text-muted);">Les produits à faible stock sont mis en avant pour éviter les ruptures.</p>
+      </div>
+      <span class="status-badge warning">{{ criticalItems.length }} produits à surveiller</span>
+    </div>
+    <div style="display: flex; gap: 0.75rem; flex-wrap: wrap; margin-top: 1rem;">
+      <div *ngFor="let item of criticalItems" class="glass-panel" style="padding: 0.75rem 1rem; border-radius: 12px; min-width: 200px; display: flex; flex-direction: column; gap: 0.55rem;">
+        <div>
+          <strong>{{ item.medication.name }}</strong>
+          <div style="color: var(--text-muted); font-size: 0.9rem; margin-top: 0.25rem;">{{ item.quantity }} unités restantes</div>
+        </div>
+        <button class="btn btn-primary btn-compact" (click)="orderFromAlert(item)" style="padding: 0.55rem 0.85rem; font-size: 0.8rem;">
+          <i class="fa-solid fa-cart-plus"></i> Commander
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="dashboard-content" style="margin-top: 0.5rem;">
+    <div class="glass-panel" style="padding: 1.25rem; border-radius: 20px; min-height: 350px;">
+      <div style="display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 1rem;">
+        <h3 style="margin: 0; font-size: 1.25rem;">Activité récente</h3>
+        <span class="status-badge success">Live</span>
+      </div>
+      <ul style="list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.85rem;">
+        <li *ngFor="let activity of recentActivities; let i = index" class="animate-fade-in" [style.animation-delay]="(i * 0.1) + 's'" style="display: flex; gap: 0.8rem; align-items: flex-start; padding: 0.8rem 0.9rem; border-radius: 12px; background: rgba(15, 23, 42, 0.03); border: 1px solid rgba(148, 163, 184, 0.12); transition: all 0.3s; cursor: default;" onmouseover="this.style.transform='translateX(5px)'; this.style.backgroundColor='rgba(15, 23, 42, 0.05)'" onmouseout="this.style.transform='translateX(0)'; this.style.backgroundColor='rgba(15, 23, 42, 0.03)'">
+          <span style="font-size: 1.2rem;">{{ activity.type === 'stock' ? '📦' : activity.type === 'reservation' ? '🧾' : '⚠️' }}</span>
+          <div style="flex: 1;">
+            <div style="font-weight: 700; color: var(--text-main);">{{ activity.title }}</div>
+            <div style="color: var(--text-muted); font-size: 0.9rem; margin-top: 0.2rem;">{{ activity.detail }}</div>
+          </div>
+          <small style="color: var(--text-muted); white-space: nowrap;">{{ activity.time }}</small>
+        </li>
+      </ul>
+    </div>
+
+
+  </div>
+
+  </ng-container>
+
+  <div class="dashboard-content" style="margin-top: 1.5rem;">
+    <div class="stocks-container">
+      <div class="tabs-header" *ngIf="focus !== 'reservations'">
+        <button class="tab-btn" [class.active]="activeTab === 'stocks'" (click)="activeTab = 'stocks'">📦 Inventaire</button>
+        <button class="tab-btn" [class.active]="activeTab === 'available'" (click)="activeTab = 'available'">✅ Médicaments disponibles</button>
+        <button class="tab-btn" *ngIf="!focus" [class.active]="activeTab === 'reservations'" (click)="activeTab = 'reservations'">🧾 Réservations ({{ reservations.length }})</button>
+        <button class="tab-btn" [class.active]="activeTab === 'expiring'" (click)="activeTab = 'expiring'" [style.color]="expiringStocks.length > 0 ? '#ef4444' : ''">⏳ Péremptions ({{ expiringStocks.length }})</button>
+        <button class="tab-btn" *ngIf="!focus" [class.active]="activeTab === 'suppliers'" (click)="activeTab = 'suppliers'">🤝 Fournisseurs</button>
+        <button class="tab-btn" *ngIf="!focus" [class.active]="activeTab === 'sales'" (click)="activeTab = 'sales'">📈 Ventes</button>
+        <button class="tab-btn" [class.active]="activeTab === 'movements'" (click)="loadMovements()">🔄 Mouvements</button>
+      </div>
+
+      <div class="glass-panel table-wrapper" *ngIf="activeTab === 'stocks'">
+        <div style="padding: 1rem; display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap;">
+          <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+            <button class="btn btn-secondary" [class.active]="inventoryView === 'all'" (click)="setInventoryFilter('all')">Tous</button>
+            <button class="btn btn-primary" [class.active]="inventoryView === 'stock'" (click)="setInventoryFilter('stock')">En stock</button>
+            <button class="btn" [class.active]="inventoryView === 'alerte'" [ngStyle]="{'background-color': inventoryView === 'alerte' ? '#f59e0b' : 'transparent', 'color': inventoryView === 'alerte' ? 'white' : '#f59e0b', 'border': '1px solid #f59e0b'}" (click)="setInventoryFilter('alerte')">Alerte</button>
+            <button class="btn btn-danger" [class.active]="inventoryView === 'rupture'" (click)="setInventoryFilter('rupture')">Rupture</button>
+          </div>
+          <div style="display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap;">
+            <input type="text" class="input-field" [(ngModel)]="inventorySearch" (input)="applyInventoryFilter()" placeholder="Rechercher un médicament" style="min-width: 220px; padding: 0.65rem 0.8rem;">
+            <button class="btn btn-secondary" *ngIf="inventorySearch" (click)="clearInventorySearch()">Effacer</button>
+          </div>
+          <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+            <button class="btn btn-accent" (click)="openAddModal()">+ Ajouter un médicament</button>
+            <button class="btn btn-primary" (click)="fileInput.click()">Importer CSV</button>
+            <input type="file" #fileInput (change)="importCSV($event)" accept=".csv" style="display: none;">
+            <button class="btn btn-secondary" (click)="exportCSV()">Exporter en CSV</button>
+            <button class="btn btn-primary" (click)="exportRupturesExcel()">Ruptures Excel</button>
+            <button class="btn btn-accent" (click)="exportRupturesPdf()">Ruptures PDF</button>
+          </div>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>Médicament</th>
+              <th>Lot</th>
+              <th>Prix</th>
+              <th>Quantité</th>
+              <th>Date Péremption</th>
+              <th>Statut</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let stock of filteredStocks; trackBy: trackByStock; let i = index" class="animate-fade-in" [style.animation-delay]="(i > 15 ? 0 : i * 0.05) + 's'">
+              <td>{{ stock.medication.name }}</td>
+              <td><code *ngIf="stock.lotNumber">{{ stock.lotNumber }}</code><span *ngIf="!stock.lotNumber" style="color:var(--text-muted)">—</span></td>
+              <td>{{ stock.medication.indicativePrice }} FCFA</td>
+              <td><span class="stock-quantity" [ngClass]="{'danger': stock.quantity <= 10}">{{ stock.quantity }}</span></td>
+              <td>{{ stock.expirationDate | date:'shortDate' }}</td>
+              <td>
+                <span class="status-badge success" *ngIf="stock.quantity > 10">En stock</span>
+                <span class="status-badge warning" *ngIf="stock.quantity > 0 && stock.quantity <= 10">Alerte</span>
+                <span class="status-badge danger" *ngIf="stock.quantity === 0">Rupture</span>
+              </td>
+              <td>
+                <button class="btn btn-primary" style="padding: 8px 16px; font-size: 0.9rem;" (click)="openUpdateModal(stock)">Mettre à jour</button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="glass-panel table-wrapper animate-fade-in" *ngIf="activeTab === 'available'">
+        <div style="display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; margin-bottom: 1rem;">
+          <div>
+            <strong>Médicaments disponibles</strong>
+            <p style="margin: 0.25rem 0 0; color: var(--text-muted);">Liste des produits actuellement en stock dans la pharmacie.</p>
+          </div>
+          <span class="status-badge success">{{ availableMedications.length }} produit(s)</span>
+        </div>
+        <table *ngIf="availableMedications.length > 0">
+          <thead>
+            <tr>
+              <th>Médicament</th>
+              <th>Description</th>
+              <th>Prix</th>
+              <th>Qté</th>
+              <th>Expiration</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let item of availableMedications; trackBy: trackByAvailableMedication">
+              <td>{{ item.name }}</td>
+              <td>{{ item.description }}</td>
+              <td>{{ item.indicativePrice }} FCFA</td>
+              <td>{{ item.quantity }}</td>
+              <td>{{ item.expirationDate | date:'dd/MM/yyyy' }}</td>
+            </tr>
+          </tbody>
+        </table>
+        <div *ngIf="availableMedications.length === 0" style="padding: 2rem; text-align: center; color: var(--text-muted);">
+          Aucun médicament disponible actuellement.
+        </div>
+      </div>
+
+      <div class="glass-panel table-wrapper animate-fade-in" *ngIf="activeTab === 'reservations'">
+        <table *ngIf="reservations.length > 0">
+          <thead>
+            <tr>
+              <th>Patient</th>
+              <th>Contact</th>
+              <th>Médicament</th>
+              <th>Qté</th>
+              <th>Mode</th>
+              <th>Date</th>
+              <th>Ordonnance</th>
+              <th>Paiement</th>
+              <th>Statut</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let res of reservations; trackBy: trackByReservation; let i = index" class="animate-fade-in" [style.animation-delay]="(i > 15 ? 0 : i * 0.05) + 's'">
+              <td>{{ res.patientName }}</td>
+              <td>{{ res.patientContact }}</td>
+              <td>{{ res.stock.medication.name }}</td>
+              <td>{{ res.quantity }}</td>
+              <td>
+                <span class="status-badge" [ngClass]="{'success': res.deliveryMode === 'LIVRAISON'}">
+                  {{ res.deliveryMode === 'LIVRAISON' ? 'Livraison' : 'Retrait' }}
+                </span>
+                <div *ngIf="res.deliveryMode === 'LIVRAISON'" style="font-size: 0.8rem; color: var(--text-muted); margin-top: 4px;">
+                  {{ res.deliveryAddress }}
+                </div>
+              </td>
+              <td>{{ res.createdAt | date:'dd/MM/yyyy HH:mm' }}</td>
+              <td>
+                <a *ngIf="res.prescriptionBase64" [href]="res.prescriptionBase64" target="_blank" download="ordonnance.jpg" style="color: var(--primary); text-decoration: underline; font-size: 0.9rem;">👁️ Voir</a>
+                <span *ngIf="!res.prescriptionBase64" style="color: var(--text-muted); font-size: 0.8rem;">Aucune</span>
+              </td>
+              <td>
+                <span class="status-badge"
+                      [ngClass]="{'success': res.paymentStatus === 'PAID', 'warning': res.paymentStatus === 'PENDING' || res.paymentStatus === 'UNPAID', 'danger': res.paymentStatus === 'FAILED'}">
+                  {{ paymentLabel(res) }}
+                </span>
+                <div *ngIf="res.paymentMethod && res.paymentMethod !== 'CASH'" style="font-size: 0.75rem; color: var(--text-muted); margin-top: 4px;">
+                  {{ res.paymentMethod === 'ORANGE_MONEY' ? 'Orange Money' : 'Airtel Money' }}
+                  <span *ngIf="res.amountDue"> — {{ res.amountDue }} FCFA</span>
+                </div>
+              </td>
+              <td>
+                <span class="status-badge" 
+                      [ngClass]="{'warning': res.status === 'PENDING', 'success': res.status === 'COMPLETED' || res.status === 'CONFIRMED', 'danger': res.status === 'CANCELLED'}">
+                  {{ res.status === 'PENDING' ? 'En attente' : 
+                     res.status === 'CONFIRMED' ? 'Confirmée' : 
+                     res.status === 'COMPLETED' ? 'Livrée' : 'Annulée' }}
+                </span>
+              </td>
+              <td>
+                <div class="action-buttons" style="display: flex; gap: 0.5rem;" *ngIf="res.status !== 'CANCELLED'">
+                  <button class="btn btn-primary" style="padding: 4px 8px; font-size: 0.8rem;" *ngIf="res.status === 'PENDING'" (click)="updateReservationStatus(res, 'CONFIRMED')">Valider</button>
+                  <button class="btn btn-accent" style="padding: 4px 8px; font-size: 0.8rem;" *ngIf="res.status === 'CONFIRMED'" (click)="updateReservationStatus(res, 'COMPLETED')">Livrer</button>
+                  <button class="btn btn-secondary" style="padding: 4px 8px; font-size: 0.8rem;" (click)="openChat(res)">💬 Chat</button>
+                  <button class="btn btn-danger" style="padding: 4px 8px; font-size: 0.8rem; background: #ef4444; border-color: #ef4444; color: white;" *ngIf="res.status !== 'COMPLETED'" (click)="updateReservationStatus(res, 'CANCELLED')">Annuler</button>
+                  <button class="btn btn-secondary" style="padding: 4px 8px; font-size: 0.8rem;" *ngIf="res.status === 'COMPLETED'" (click)="generateReceipt(res)">📄 Reçu PDF</button>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        <div *ngIf="reservations.length === 0" style="padding: 2rem; text-align: center; color: var(--text-muted);">
+          Aucune réservation en cours.
+        </div>
+      </div>
+
+      <div class="glass-panel table-wrapper animate-fade-in" *ngIf="activeTab === 'suppliers'">
+        <div style="display: flex; gap: 1rem; flex-wrap: wrap; margin-bottom: 1rem;">
+          <div class="form-group" style="min-width: 220px;">
+            <label>Nom du fournisseur</label>
+            <input type="text" class="input-field" [(ngModel)]="newSupplier.name">
+          </div>
+          <div class="form-group" style="min-width: 220px;">
+            <label>Contact</label>
+            <input type="text" class="input-field" [(ngModel)]="newSupplier.contact">
+          </div>
+          <div class="form-group" style="min-width: 220px;">
+            <label>Email</label>
+            <input type="email" class="input-field" [(ngModel)]="newSupplier.email">
+          </div>
+          <div class="form-group" style="min-width: 220px;">
+            <label>Spécialité</label>
+            <input type="text" class="input-field" [(ngModel)]="newSupplier.specialty">
+          </div>
+          <button class="btn btn-primary" style="align-self: end;" (click)="submitSupplier()">Ajouter</button>
+        </div>
+
+        <table *ngIf="suppliers.length > 0">
+          <thead>
+            <tr>
+              <th>Nom</th>
+              <th>Contact</th>
+              <th>Email</th>
+              <th>Spécialité</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let supplier of suppliers; trackBy: trackBySupplier">
+              <td>{{ supplier.name }}</td>
+              <td>{{ supplier.contact }}</td>
+              <td>{{ supplier.email }}</td>
+              <td>{{ supplier.specialty }}</td>
+            </tr>
+          </tbody>
+        </table>
+        <div *ngIf="suppliers.length === 0" style="padding: 2rem; text-align: center; color: var(--text-muted);">
+          Aucun fournisseur enregistré.
+        </div>
+      </div>
+
+      <div class="glass-panel table-wrapper animate-fade-in" *ngIf="activeTab === 'expiring'">
+        <table *ngIf="expiringStocks.length > 0">
+          <thead>
+            <tr>
+              <th>Médicament</th>
+              <th>Quantité restante</th>
+              <th>Date de péremption</th>
+              <th>Statut</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let stock of expiringStocks; trackBy: trackByStock">
+              <td>{{ stock.medication.name }}</td>
+              <td>{{ stock.quantity }}</td>
+              <td style="color: #ef4444; font-weight: bold;">{{ stock.expirationDate | date:'mediumDate' }}</td>
+              <td><span class="status-badge danger">Expire bientôt</span></td>
+            </tr>
+          </tbody>
+        </table>
+        <div *ngIf="expiringStocks.length === 0" style="padding: 2rem; text-align: center; color: var(--text-muted);">
+          Aucun médicament ne périme dans les 3 prochains mois.
+        </div>
+      </div>
+
+      <div class="glass-panel table-wrapper animate-fade-in" *ngIf="activeTab === 'sales'">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; gap: 1rem; flex-wrap: wrap; padding: 1rem;">
+          <div>
+            <strong>Historique des ventes au comptoir</strong>
+            <p style="margin: 0.25rem 0 0; color: var(--text-muted);">Liste de toutes les ventes effectuées directement en pharmacie.</p>
+          </div>
+          <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">
+            <div style="display: flex; gap: 0.5rem; align-items: center; background: rgba(0,0,0,0.02); padding: 0.5rem; border-radius: 8px;">
+              <label style="font-size: 0.85rem; color: var(--text-muted);">Du:</label>
+              <input type="date" class="input-field" [(ngModel)]="salesStartDate" (change)="applySalesFilter()" style="padding: 0.4rem; font-size: 0.9rem;">
+              <label style="font-size: 0.85rem; color: var(--text-muted);">Au:</label>
+              <input type="date" class="input-field" [(ngModel)]="salesEndDate" (change)="applySalesFilter()" style="padding: 0.4rem; font-size: 0.9rem;">
+              <button class="btn btn-secondary" style="padding: 0.4rem 0.8rem; font-size: 0.85rem;" *ngIf="salesStartDate || salesEndDate" (click)="clearSalesFilter()">Effacer</button>
+            </div>
+            <button class="btn btn-primary" (click)="exportSalesCSV()">Exporter CSV</button>
+            <button class="btn btn-accent" (click)="exportSalesExcel()">Excel</button>
+            <button class="btn btn-secondary" (click)="exportSalesPdf()">PDF</button>
+          </div>
+        </div>
+        
+        <!-- Résumé de la période filtrée -->
+        <div *ngIf="filteredSalesHistory.length > 0" style="display: flex; gap: 1.5rem; margin-bottom: 1.5rem; padding: 0 1rem;">
+          <div style="background: rgba(15, 118, 110, 0.1); border-left: 4px solid var(--primary); padding: 1rem; border-radius: 8px; flex: 1;">
+            <div style="font-size: 0.85rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700;">Ventes de la période</div>
+            <div style="font-size: 1.5rem; font-weight: 800; color: var(--text-main);">{{ filteredSalesHistory.length }}</div>
+          </div>
+          <div style="background: rgba(37, 99, 235, 0.1); border-left: 4px solid var(--accent); padding: 1rem; border-radius: 8px; flex: 1;">
+            <div style="font-size: 0.85rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700;">Chiffre d'Affaires Période</div>
+            <div style="font-size: 1.5rem; font-weight: 800; color: var(--text-main);">{{ getSalesTotal() | number:'1.2-2' }} FCFA</div>
+          </div>
+        </div>
+
+        <table *ngIf="filteredSalesHistory.length > 0">
+          <thead>
+            <tr>
+              <th>ID Vente</th>
+              <th>Client</th>
+              <th>Médicament</th>
+              <th>Quantité</th>
+              <th>Total</th>
+              <th>Date</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let sale of filteredSalesHistory; trackBy: trackByReservation; let i = index" class="animate-fade-in" [style.animation-delay]="(i > 15 ? 0 : i * 0.05) + 's'">
+              <td>#{{ sale.id }}</td>
+              <td>{{ sale.customerName || 'Standard' }}</td>
+              <td>{{ sale.medication.name }}</td>
+              <td>{{ sale.quantity }}</td>
+              <td style="font-weight: bold; color: var(--primary);">{{ sale.totalPrice | number:'1.2-2' }} FCFA</td>
+              <td>{{ sale.saleDate | date:'dd/MM/yyyy HH:mm' }}</td>
+            </tr>
+          </tbody>
+        </table>
+        <div *ngIf="filteredSalesHistory.length === 0" style="padding: 2rem; text-align: center; color: var(--text-muted);">
+          Aucune vente trouvée pour cette période.
+        </div>
+      </div>
+
+      <div class="glass-panel table-wrapper animate-fade-in" *ngIf="activeTab === 'movements'">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; gap: 1rem; flex-wrap: wrap; padding: 1rem;">
+          <div>
+            <strong>Historique des Mouvements de Stock</strong>
+            <p style="margin: 0.25rem 0 0; color: var(--text-muted);">Traçabilité complète des entrées et sorties (EF-16).</p>
+          </div>
+        </div>
+        
+        <table *ngIf="stockMovements.length > 0">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Médicament</th>
+              <th>Type</th>
+              <th>Qté</th>
+              <th>Raison</th>
+              <th>Utilisateur</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let mov of stockMovements; trackBy: trackByStock; let i = index" class="animate-fade-in" [style.animation-delay]="(i > 15 ? 0 : i * 0.05) + 's'">
+              <td>{{ mov.movementDate | date:'dd/MM/yyyy HH:mm' }}</td>
+              <td>{{ mov.stock.medication.name }}</td>
+              <td>
+                <span class="status-badge" [ngClass]="{'success': mov.type === 'ENTREE', 'danger': mov.type === 'SORTIE'}">
+                  {{ mov.type }}
+                </span>
+              </td>
+              <td>{{ mov.quantity }}</td>
+              <td>{{ mov.reason }}</td>
+              <td>{{ mov.userEmail || 'Système' }}</td>
+            </tr>
+          </tbody>
+        </table>
+        <div *ngIf="stockMovements.length === 0" style="padding: 2rem; text-align: center; color: var(--text-muted);">
+          Aucun mouvement de stock enregistré.
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Mise à jour de Stock -->
+<div class="modal-overlay" *ngIf="showUpdateModal">
+  <div class="modal-content glass-panel animate-fade-in">
+    <h3>Mettre à jour le stock</h3>
+    <p class="modal-desc">Médicament : {{ selectedStock?.medication?.name }}</p>
+    
+    <div class="form-group">
+      <label>Nouvelle Quantité</label>
+      <input type="number" class="input-field" [(ngModel)]="newQuantity" min="0">
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn" (click)="closeUpdateModal()">Annuler</button>
+      <button class="btn btn-primary" (click)="submitUpdate()">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Ajout de Stock -->
+<div class="modal-overlay" *ngIf="showAddModal">
+  <div class="modal-content glass-panel animate-fade-in">
+    <h3>Ajouter un nouveau médicament au stock</h3>
+    
+    <div class="form-group" style="margin-top: 1rem;">
+      <label>Sélectionnez un médicament</label>
+      <select class="input-field" [(ngModel)]="newStockData.medicationId">
+        <option value="">-- Choisir --</option>
+        <option *ngFor="let med of allMedications" [value]="med.id">{{ med.name }}</option>
+      </select>
+    </div>
+    <div class="form-group" style="margin-top: 1rem;">
+      <label>Quantité Initiale</label>
+      <input type="number" class="input-field" [(ngModel)]="newStockData.quantity" min="1">
+    </div>
+    <div class="form-group" style="margin-top: 1rem;">
+      <label>Date de péremption</label>
+      <input type="date" class="input-field" [(ngModel)]="newStockData.expirationDate">
+    </div>
+    <div class="form-group" style="margin-top: 1rem;">
+      <label>N° de lot</label>
+      <input type="text" class="input-field" [(ngModel)]="newStockData.lotNumber" placeholder="ex. LOT-TD-0001">
+    </div>
+    <div class="form-group" style="margin-top: 1rem;">
+      <label>N° de série (optionnel)</label>
+      <input type="text" class="input-field" [(ngModel)]="newStockData.serialNumber" placeholder="ex. SN-…">
+    </div>
+
+    <div class="modal-actions" style="margin-top: 1.5rem;">
+      <button class="btn" (click)="closeAddModal()">Annuler</button>
+      <button class="btn btn-primary" (click)="submitAddStock()">Ajouter</button>
+    </div>
+  </div>
+</div>
+
+<!-- Chat réservation -->
+<div class="modal-overlay" *ngIf="chatReservation">
+  <div class="modal-content glass-panel animate-fade-in" style="max-width: 520px;">
+    <h3>Chat — réservation N°{{ chatReservation.id }}</h3>
+    <p style="color: var(--text-muted); margin-top: 0;">{{ chatReservation.patientName }} · {{ chatReservation.stock?.medication?.name }}</p>
+    <div style="max-height: 280px; overflow-y: auto; display: flex; flex-direction: column; gap: 0.6rem; margin: 1rem 0; padding: 0.5rem; background: rgba(0,0,0,0.03); border-radius: 12px;">
+      <div *ngFor="let m of chatMessages" [style.align-self]="m.senderRole === 'PHARMACIEN' ? 'flex-end' : 'flex-start'"
+           style="max-width: 85%; padding: 0.55rem 0.75rem; border-radius: 12px;"
+           [style.background]="m.senderRole === 'PHARMACIEN' ? 'rgba(16,185,129,0.15)' : 'rgba(37,99,235,0.12)'">
+        <div style="font-size: 0.75rem; font-weight: 700;">{{ m.senderName }}</div>
+        <div>{{ m.content }}</div>
+        <div style="font-size: 0.7rem; color: var(--text-muted);">{{ m.createdAt | date:'dd/MM HH:mm' }}</div>
+      </div>
+      <div *ngIf="chatMessages.length === 0" style="text-align:center; color: var(--text-muted); padding: 1rem;">Aucun message</div>
+    </div>
+    <div style="display:flex; gap: 0.5rem;">
+      <input class="input-field" style="flex:1" [(ngModel)]="chatDraft" (keyup.enter)="sendChat()" placeholder="Votre message…">
+      <button class="btn btn-primary" (click)="sendChat()">Envoyer</button>
+    </div>
+    <div class="modal-actions" style="margin-top: 1rem;">
+      <button class="btn" (click)="closeChat()">Fermer</button>
+    </div>
+  </div>
+</div>
+
+<!-- Traçabilité / rappels (toujours accessible bas de page stocks via section) -->
+<div class="glass-panel" style="margin: 1.5rem; padding: 1.25rem;" *ngIf="activeTab === 'stocks'">
+  <h3 style="margin-top:0;">Traçabilité lot & rappels produits</h3>
+  <div style="display:flex; gap:0.75rem; flex-wrap:wrap; margin-bottom: 1rem;">
+    <input class="input-field" style="min-width:180px" [(ngModel)]="lotTraceQuery" placeholder="N° de lot à tracer">
+    <button class="btn btn-secondary" (click)="searchLotTrace()">Tracer</button>
+    <input class="input-field" style="min-width:160px" [(ngModel)]="recallLot" placeholder="Lot à rappeler">
+    <input class="input-field" style="min-width:200px" [(ngModel)]="recallReason" placeholder="Motif du rappel">
+    <button class="btn btn-danger" (click)="launchRecall()">Lancer un rappel</button>
+  </div>
+  <div *ngIf="lotTraceResult" style="margin-bottom:1rem; font-size:0.9rem;">
+    Lot <code>{{ lotTraceResult.lotNumber }}</code> —
+    stock : {{ lotTraceResult.stockUnits }} u. · vendu : {{ lotTraceResult.soldUnits }} u. ·
+    rappels : {{ lotTraceResult.recalls?.length || 0 }}
+  </div>
+  <div *ngIf="recalls.length">
+    <strong>Rappels ouverts</strong>
+    <ul>
+      <li *ngFor="let r of recalls">
+        {{ r.lotNumber }} — {{ r.reason }}
+        <span class="status-badge" [ngClass]="{'warning': r.status==='OPEN', 'success': r.status==='CLOSED'}">{{ r.status }}</span>
+        <button class="btn btn-secondary" style="padding:2px 8px; font-size:0.75rem; margin-left:0.5rem;" *ngIf="r.status==='OPEN'" (click)="closeRecall(r.id)">Clôturer</button>
+      </li>
+    </ul>
+  </div>
+</div>

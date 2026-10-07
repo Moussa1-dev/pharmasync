@@ -1,0 +1,40 @@
+<div class="chatbot-container">
+  <button class="chatbot-toggle" (click)="toggleChat()" [ngClass]="{'open': isOpen}" aria-label="Assistant">
+    <i *ngIf="!isOpen" class="fa-solid fa-comments"></i>
+    <i *ngIf="isOpen" class="fa-solid fa-xmark"></i>
+  </button>
+
+  <div class="chatbot-window glass-panel" *ngIf="isOpen">
+    <div class="chatbot-header">
+      <div class="bot-avatar"><i class="fa-solid fa-robot"></i></div>
+      <div class="header-info">
+        <h4>Assistant PharmaSync</h4>
+        <p>En ligne</p>
+      </div>
+    </div>
+
+    <div class="chatbot-messages" #scrollMe [scrollTop]="scrollMe.scrollHeight">
+      <div *ngFor="let msg of messages" class="message" [ngClass]="msg.sender">
+        <div class="message-bubble">{{ msg.text }}</div>
+      </div>
+      <div *ngIf="isTyping" class="message bot">
+        <div class="message-bubble typing-indicator">
+          <span></span><span></span><span></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="chatbot-input">
+      <input
+        type="text"
+        [(ngModel)]="userInput"
+        (keyup.enter)="sendMessage()"
+        placeholder="Posez votre question..."
+        class="input-field"
+      >
+      <button class="btn btn-primary send-btn" (click)="sendMessage()" aria-label="Envoyer">
+        <i class="fa-solid fa-paper-plane"></i>
+      </button>
+    </div>
+  </div>
+</div>

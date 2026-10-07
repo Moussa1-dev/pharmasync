@@ -1,0 +1,101 @@
+<div class="orders-page animate-fade-in">
+  <div class="page-header">
+    <div>
+      <p class="eyebrow">Gestion achats</p>
+      <h2>Commandes fournisseurs - {{ auth.getActivePharmacyName() }}</h2>
+    </div>
+    <span class="status-pill success">{{ orders.length }} commandes</span>
+  </div>
+
+  <div class="content-grid">
+    <div class="glass-panel form-card">
+      <h3>Nouvelle commande</h3>
+
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Fournisseur</label>
+          <select class="input-field" [(ngModel)]="form.supplierId">
+            <option value="">Sélectionner</option>
+            <option *ngFor="let supplier of suppliers" [value]="supplier.id">{{ supplier.name }}</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Médicament</label>
+          <select class="input-field" [(ngModel)]="form.medicationName">
+            <option value="">Sélectionner</option>
+            <option *ngFor="let med of medications" [value]="med.name">{{ med.name }}</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Quantité</label>
+          <input type="number" min="1" class="input-field" [(ngModel)]="form.quantity">
+        </div>
+
+        <div class="form-group">
+          <label>Prix unitaire (FCFA)</label>
+          <input type="number" min="0" class="input-field" [(ngModel)]="form.unitPrice">
+        </div>
+
+        <div class="form-group full-width">
+          <label>Date prévue</label>
+          <input type="date" class="input-field" [(ngModel)]="form.expectedDate">
+        </div>
+      </div>
+
+      <button class="btn btn-primary" (click)="onSubmit()">Enregistrer la commande</button>
+    </div>
+
+    <div class="glass-panel summary-card">
+      <h3>Vue d’ensemble</h3>
+      <ul>
+        <li><span>En attente</span><strong>{{ pendingOrdersCount }}</strong></li>
+        <li><span>Confirmées</span><strong>{{ confirmedOrdersCount }}</strong></li>
+        <li><span>Reçues</span><strong>{{ receivedOrdersCount }}</strong></li>
+        <li><span>Total estimé</span><strong>{{ totalOrderValue | number:'1.2-2' }} FCFA</strong></li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="glass-panel table-card">
+    <div class="table-toolbar">
+      <h3>Historique des commandes</h3>
+      <div class="filter-group">
+        <button class="filter-btn" [class.active]="selectedFilter === 'all'" (click)="selectedFilter = 'all'">Tout</button>
+        <button class="filter-btn" [class.active]="selectedFilter === 'En attente'" (click)="selectedFilter = 'En attente'">En attente</button>
+        <button class="filter-btn" [class.active]="selectedFilter === 'Confirmée'" (click)="selectedFilter = 'Confirmée'">Confirmée</button>
+        <button class="filter-btn" [class.active]="selectedFilter === 'Reçue'" (click)="selectedFilter = 'Reçue'">Reçue</button>
+      </div>
+    </div>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Fournisseur</th>
+          <th>Médicament</th>
+          <th>Quantité</th>
+          <th>Total</th>
+          <th>Livraison</th>
+          <th>Statut</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let order of filteredOrders()">
+          <td>{{ order.supplierName }}</td>
+          <td>{{ order.medicationName }}</td>
+          <td>{{ order.quantity }}</td>
+          <td>{{ order.total | number:'1.2-2' }} FCFA</td>
+          <td>{{ order.expectedDate | date:'dd/MM/yyyy' }}</td>
+          <td>
+            <span class="status-chip" [ngClass]="getOrderStatusClass(order.status)">{{ order.status }}</span>
+          </td>
+          <td>
+            <button class="btn btn-secondary small" *ngIf="order.status !== 'Reçue'" (click)="markReceived(order.id)">Marquer reçue</button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>

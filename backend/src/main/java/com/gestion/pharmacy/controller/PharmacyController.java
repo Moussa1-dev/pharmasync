@@ -1,5 +1,7 @@
 package com.gestion.pharmacy.controller;
 
+import com.gestion.pharmacy.service.StockAlertScheduler;
+import com.gestion.pharmacy.security.PharmacyAccessService;
 import com.gestion.pharmacy.entity.Stock;
 import com.gestion.pharmacy.entity.Medication;
 import com.gestion.pharmacy.entity.Pharmacy;
@@ -35,6 +37,8 @@ public class PharmacyController {
     private final DashboardSummaryService dashboardSummaryService;
     private final RestockAlertService restockAlertService;
     private final DutyScheduleService dutyScheduleService;
+    private final PharmacyAccessService pharmacyAccessService;
+    private final StockAlertScheduler stockAlertScheduler;
 
     @GetMapping("/on-call")
     public ResponseEntity<List<Pharmacy>> getOnCallPharmacies() {
@@ -94,7 +98,7 @@ public class PharmacyController {
 
     @GetMapping("/{id}/stocks/by-barcode/{code}")
     public ResponseEntity<?> getStockByBarcode(@PathVariable Long id, @PathVariable String code) {
-        return stockRepository.findByPharmacyIdAndMedicationBarcode(id, code)
+        return stockRepository.findFirstByPharmacyIdAndMedicationBarcodeOrderByExpirationDateAsc(id, code)
                 .<ResponseEntity<?>>map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
@@ -127,6 +131,9 @@ public class PharmacyController {
     public ResponseEntity<?> addStock(@PathVariable Long id, @Valid @RequestBody StockRequestDTO requestDTO) {
         Pharmacy pharmacy = pharmacyRepository.findById(id).orElse(null);
         if (pharmacy == null) return ResponseEntity.notFound().build();
+        if (!pharmacyAccessService.canManage(id)) {
+            return ResponseEntity.status(403).body("Vous ne gérez pas cette pharmacie");
+        }
 
         Long medicationId = requestDTO.getMedicationId();
         Medication medication = medicationRepository.findById(medicationId).orElse(null);
@@ -145,7 +152,9 @@ public class PharmacyController {
                 if (requestDTO.getSerialNumber() != null) {
                     existing.setSerialNumber(requestDTO.getSerialNumber());
                 }
-                return ResponseEntity.ok(stockRepository.save(existing));
+                Stock savedExisting = stockRepository.save(existing);
+                stockAlertScheduler.checkStock(savedExisting); // alerte en temps réel
+                return ResponseEntity.ok(savedExisting);
             }
         } else {
             // Sans lot : comportement historique (un stock par médicament)
@@ -166,16 +175,22 @@ public class PharmacyController {
         newStock.setLotNumber(lot);
         newStock.setSerialNumber(requestDTO.getSerialNumber());
 
-        return ResponseEntity.ok(stockRepository.save(newStock));
+        Stock savedNew = stockRepository.save(newStock);
+        stockAlertScheduler.checkStock(savedNew); // alerte en temps réel
+        return ResponseEntity.ok(savedNew);
     }
 
     @PutMapping("/stocks/{stockId}")
     public ResponseEntity<?> updateStock(@PathVariable Long stockId, @Valid @RequestBody UpdateStockDTO requestDTO) {
         Stock stock = stockRepository.findById(stockId).orElse(null);
         if (stock == null) return ResponseEntity.notFound().build();
+        if (!pharmacyAccessService.canManage(stock.getPharmacy().getId())) {
+            return ResponseEntity.status(403).body("Vous ne gérez pas cette pharmacie");
+        }
         
         stock.setQuantity(requestDTO.getQuantity());
         stockRepository.save(stock);
+        stockAlertScheduler.checkStock(stock); // alerte en temps réel
         return ResponseEntity.ok(stock);
     }
 }

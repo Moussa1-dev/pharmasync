@@ -1,0 +1,76 @@
+<div class="login-container animate-fade-in">
+  <div class="login-shell">
+    <div class="login-visual">
+      <div class="brand-badge">
+        <i class="fa-solid fa-prescription-bottle-medical"></i> PharmaSync
+      </div>
+      <h2>Gestion pharmaceutique intelligente</h2>
+      <p>Connectez-vous avec le compte <strong>Pharmacien</strong> pour accéder au tableau de bord, aux stocks, aux ventes et aux réservations.</p>
+
+      <ul class="login-highlights">
+        <li><i class="fa-solid fa-boxes-stacked"></i> Suivi des stocks en temps réel</li>
+        <li><i class="fa-solid fa-clipboard-list"></i> Gestion des réservations patients</li>
+        <li><i class="fa-solid fa-cash-register"></i> Point de vente (POS)</li>
+      </ul>
+    </div>
+
+    <div class="login-card">
+      <div class="login-header">
+        <span class="mini-label">Espace sécurisé</span>
+        <h2>Connexion</h2>
+        <p>Utilisez un compte pharmacien ou admin pour voir toutes les pages pro.</p>
+      </div>
+
+      <div class="form-group">
+        <label>Email</label>
+        <div class="input-wrapper">
+          <i class="fa-solid fa-envelope input-icon"></i>
+          <input type="email" class="input-field" [(ngModel)]="username" placeholder="votre@email.com" (keyup.enter)="onLogin()">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Mot de passe</label>
+        <div class="input-wrapper">
+          <i class="fa-solid fa-lock input-icon"></i>
+          <input [type]="showPassword ? 'text' : 'password'" class="input-field" [(ngModel)]="password" placeholder="••••••••" (keyup.enter)="onLogin()">
+          <button type="button" class="toggle-password" (click)="togglePassword()" [attr.aria-label]="showPassword ? 'Masquer' : 'Afficher'">
+            <i [class]="showPassword ? 'fa-solid fa-eye-slash' : 'fa-solid fa-eye'"></i>
+          </button>
+        </div>
+        <div style="text-align: right; margin-top: 5px;">
+          <a routerLink="/forgot-password" style="font-size: 0.9em; color: var(--primary);">Mot de passe oublié ?</a>
+        </div>
+      </div>
+
+      <div *ngIf="error" class="error-msg">
+        <i class="fa-solid fa-circle-exclamation"></i> {{ error }}
+      </div>
+
+      <button class="btn btn-primary login-btn" (click)="onLogin()" [disabled]="loading">
+        <i *ngIf="!loading" class="fa-solid fa-right-to-bracket"></i>
+        <i *ngIf="loading" class="fa-solid fa-spinner fa-spin"></i>
+        {{ loading ? 'Connexion...' : 'Se connecter' }}
+      </button>
+
+      <div style="margin-top: 1rem; text-align: center;">
+        <span style="color: var(--text-muted); font-size: 0.9em; margin-bottom: 0.5rem; display: block;">Vous êtes un patient ?</span>
+        <button class="btn btn-secondary login-btn" (click)="continueAsGuest()" style="width: 100%;">
+          <i class="fa-solid fa-user-injured"></i> Accéder sans compte
+        </button>
+        <a routerLink="/register" style="display: block; margin-top: 0.75rem; color: var(--primary); font-size: 0.9em;">
+          Pas encore de compte ? Créer un compte patient
+        </a>
+      </div>
+
+      <div class="demo-section">
+        <span class="demo-label">Comptes de démonstration — cliquez pour remplir</span>
+        <div class="demo-chips">
+          <button type="button" class="demo-chip" *ngFor="let account of demoAccounts" (click)="fillDemo(account)" [title]="account.hint">
+            <i class="fa-solid" [ngClass]="account.icon"></i> {{ account.label }}
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,5 +1,7 @@
 package com.gestion.pharmacy.controller;
 
+import com.gestion.pharmacy.service.StockAlertScheduler;
+import com.gestion.pharmacy.security.PharmacyAccessService;
 import com.gestion.pharmacy.entity.Reservation;
 import com.gestion.pharmacy.entity.Stock;
 import com.gestion.pharmacy.repository.ReservationRepository;
@@ -26,6 +28,8 @@ public class ReservationController {
     private final SimpMessagingTemplate messagingTemplate;
     private final NotificationService notificationService;
     private final MobileMoneyService mobileMoneyService;
+    private final PharmacyAccessService pharmacyAccessService;
+    private final StockAlertScheduler stockAlertScheduler;
 
     @GetMapping
     public ResponseEntity<List<Reservation>> getAllReservations() {
@@ -47,25 +51,34 @@ public class ReservationController {
     @PostMapping
     @Transactional
     public ResponseEntity<?> createReservation(@RequestBody @Valid Reservation reservation) {
+        if (reservation.getStock() == null || reservation.getStock().getId() == null) {
+            return ResponseEntity.badRequest().body("Stock manquant");
+        }
+        if (reservation.getQuantity() == null || reservation.getQuantity() <= 0) {
+            return ResponseEntity.badRequest().body("La quantité doit être supérieure à zéro");
+        }
         Stock stock = stockRepository.findById(reservation.getStock().getId()).orElse(null);
         if (stock == null) {
             return ResponseEntity.badRequest().body("Stock introuvable");
         }
 
-        if (stock.getQuantity() < reservation.getQuantity()) {
+        if (stock.getQuantity() == null || stock.getQuantity() < reservation.getQuantity()) {
             return ResponseEntity.badRequest().body("Quantité insuffisante en stock");
         }
 
         stock.setQuantity(stock.getQuantity() - reservation.getQuantity());
         stockRepository.save(stock);
+        stockAlertScheduler.checkStock(stock); // alerte en temps réel
 
+        // Champs fixés par le serveur : le client ne peut pas choisir
+        // lui-même le statut, le montant ou l'état du paiement.
+        reservation.setId(null);
         reservation.setStock(stock);
-        if (reservation.getAmountDue() == null) {
-            reservation.setAmountDue(mobileMoneyService.computeAmount(reservation));
-        }
-        if (reservation.getPaymentStatus() == null) {
-            reservation.setPaymentStatus("UNPAID");
-        }
+        reservation.setStatus("PENDING");
+        reservation.setPaymentStatus("UNPAID");
+        reservation.setPaymentReference(null);
+        reservation.setSmsReminderSent(false);
+        reservation.setAmountDue(mobileMoneyService.computeAmount(reservation));
 
         // Paiement mobile demandé à la création
         boolean wantsMobilePay = reservation.getPaymentMethod() != null
@@ -126,11 +139,22 @@ public class ReservationController {
         }
 
         String newStatus = payload.get("status");
+        if (newStatus == null || !java.util.Set.of("PENDING", "CONFIRMED", "COMPLETED", "CANCELLED").contains(newStatus)) {
+            return ResponseEntity.badRequest().body("Statut invalide");
+        }
+        if (res.getStock() != null && res.getStock().getPharmacy() != null
+                && !pharmacyAccessService.canManage(res.getStock().getPharmacy().getId())) {
+            return ResponseEntity.status(403).body("Vous ne gérez pas cette pharmacie");
+        }
+        // Le stock n'est "retenu" que tant que la réservation est en attente ou confirmée.
+        // Une réservation expirée ou déjà annulée a déjà rendu son stock.
+        String oldStatus = res.getStatus();
+        boolean stockStillReserved = "PENDING".equals(oldStatus) || "CONFIRMED".equals(oldStatus);
         String patientKey = res.getPatientEmail() != null && !res.getPatientEmail().isBlank()
                 ? res.getPatientEmail()
                 : (res.getPatientContact() != null ? res.getPatientContact() : res.getPatientName());
 
-        if ("CANCELLED".equals(newStatus) && !"CANCELLED".equals(res.getStatus())) {
+        if ("CANCELLED".equals(newStatus) && stockStillReserved) {
             Stock stock = res.getStock();
             stock.setQuantity(stock.getQuantity() + res.getQuantity());
             stockRepository.save(stock);

@@ -1,0 +1,286 @@
+<div class="search-page animate-fade-in">
+  <div class="search-header">
+    <h2>Rechercher un médicament</h2>
+    <p>Trouvez les pharmacies les plus proches avec disponibilité en temps réel</p>
+  </div>
+
+  <div class="search-box glass-panel">
+    <div class="search-input-wrap">
+      <i class="fa-solid fa-magnifying-glass search-leading-icon"></i>
+      <input type="text" class="input-field" placeholder="Ex: Paracétamol, Doliprane..."
+             [(ngModel)]="query"
+             (ngModelChange)="onQueryInput()"
+             (keyup.enter)="onSearch()"
+             (focus)="onQueryInput()"
+             (blur)="showSuggestions = false"
+             autocomplete="off">
+      <button class="voice-btn" (click)="toggleVoiceSearch()" [class.listening]="isListening" title="Recherche vocale">
+        <i [class]="isListening ? 'fa-solid fa-circle-stop' : 'fa-solid fa-microphone'"></i>
+      </button>
+      <div class="suggest-dropdown" *ngIf="showSuggestions && suggestions.length">
+        <button type="button" *ngFor="let s of suggestions"
+                (mousedown)="selectSuggestion(s)">{{ s }}</button>
+      </div>
+    </div>
+    <button class="btn btn-secondary btn-icon-only" title="Utiliser ma position" (click)="getUserLocation(true)">
+      <i class="fa-solid fa-location-crosshairs"></i>
+    </button>
+    <button class="btn btn-accent btn-compact" (click)="getUserLocation(true)">
+      <i class="fa-solid fa-route"></i> Pharmacie la plus proche
+    </button>
+    <button class="btn btn-primary" (click)="onSearch()" [disabled]="loading">
+      <i *ngIf="loading" class="fa-solid fa-spinner fa-spin"></i>
+      {{ loading ? 'Recherche...' : 'Rechercher' }}
+    </button>
+  </div>
+
+  <div *ngIf="locationStatus" class="location-status">
+    <i class="fa-solid fa-location-dot"></i> {{ locationStatus }}
+  </div>
+
+  <!-- Ordinateur sans GPS : l'utilisateur indique sa position -->
+  <div class="manual-position">
+    <input type="text" [(ngModel)]="addressQuery" (keyup.enter)="locateAddress()"
+           list="quartiers-ndjamena"
+           placeholder="Mon quartier ou mon adresse (ex. Moursal, Farcha, Chagoua...)"
+           aria-label="Mon quartier ou mon adresse" />
+    <datalist id="quartiers-ndjamena">
+      <option *ngFor="let q of quartiers" [value]="q"></option>
+    </datalist>
+    <button class="btn btn-secondary btn-compact" (click)="locateAddress()" [disabled]="locatingAddress || !addressQuery.trim()">
+      <i class="fa-solid" [class.fa-location-dot]="!locatingAddress" [class.fa-spinner]="locatingAddress" [class.fa-spin]="locatingAddress"></i>
+      Placer ma position
+    </button>
+    <small>ou cliquez directement sur la carte</small>
+  </div>
+
+  <div *ngIf="offlineMode" class="offline-banner" style="margin-bottom: 1rem;">
+    <i class="fa-solid fa-wifi"></i> Mode hors-ligne — résultats issus du cache local.
+  </div>
+
+  <div class="filter-bar glass-panel">
+    <button class="filter-chip" [class.active]="onCallOnly" (click)="toggleOnCallFilter()">
+      <i class="fa-solid fa-moon"></i>
+      {{ onCallOnly ? 'Garde activée' : 'Pharmacies de garde' }}
+    </button>
+
+    <label class="filter-item">
+      <input type="checkbox" [(ngModel)]="stockOnly" (change)="onSearch()">
+      En stock seulement
+    </label>
+
+    <label class="filter-item">
+      Distance max (km)
+      <input type="number" class="input-field input-compact" [(ngModel)]="maxDistance" (ngModelChange)="onSearch()" min="1" max="50">
+    </label>
+
+    <label class="filter-item">
+      Prix max
+      <input type="number" class="input-field input-compact" [(ngModel)]="maxPrice" (ngModelChange)="applyFilters()" min="0">
+    </label>
+
+    <label class="filter-item">
+      Trier par
+      <select class="input-field input-compact" [(ngModel)]="sortBy" (change)="applyFilters()">
+        <option value="distance">Distance</option>
+        <option value="price">Prix</option>
+        <option value="stock">Stock</option>
+      </select>
+    </label>
+
+    <button class="btn btn-secondary btn-compact" (click)="resetFilters()">
+      <i class="fa-solid fa-rotate-left"></i> Réinitialiser
+    </button>
+  </div>
+
+  <div *ngIf="searchHistory.length > 0" class="history-section">
+    <p>Recherches récentes</p>
+    <div class="history-chips">
+      <button class="history-chip" *ngFor="let item of searchHistory" (click)="selectHistory(item)">{{ item }}</button>
+      <button class="history-chip danger" (click)="clearHistory()">
+        <i class="fa-solid fa-trash"></i> Effacer
+      </button>
+    </div>
+  </div>
+
+  <div class="loading" *ngIf="loading">
+    <p>Recherche en cours...</p>
+  </div>
+
+  <div *ngIf="!loading && nearestPharmacies.length > 0 && !query.trim()" style="margin: 1rem auto 0; max-width: 900px;">
+    <div class="glass-panel" style="padding: 1rem 1.25rem; border-left: 4px solid #22c55e;">
+      <div style="display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center;">
+        <strong style="color: #22c55e;">Votre position :</strong>
+        <span style="color: white;">{{ userLat | number:'1.4-4' }}, {{ userLng | number:'1.4-4' }}</span>
+      </div>
+      <div style="margin-top: 0.75rem; display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center;">
+        <strong style="color: #22c55e;">Pharmacie la plus proche :</strong>
+        <span style="color: white;">
+          {{ closestPharmacy?.name || nearestPharmacies[0]?.name }}
+        </span>
+        <span *ngIf="closestPharmacy && closestPharmacy.latitude && closestPharmacy.longitude" style="color: var(--text-muted);">
+          à {{ calculateDistanceKm(userLat, userLng, closestPharmacy.latitude, closestPharmacy.longitude) | number:'1.1-2' }} km
+        </span>
+      </div>
+    </div>
+
+    <div class="map-wrapper glass-panel" style="margin-top: 1rem;">
+      <div id="map" style="height: 400px; width: 100%; border-radius: 12px;"></div>
+    </div>
+
+    <div class="results" style="margin-top: 1rem;">
+      <div class="result-card glass-panel hover-glow" *ngFor="let pharma of nearestPharmacies; let i = index" [style.border]="i === 0 ? '2px solid #22c55e' : ''" [style.boxShadow]="i === 0 ? '0 0 0 1px rgba(34,197,94,0.45), 0 18px 40px -18px rgba(34,197,94,0.65)' : ''">
+        <div class="card-header">
+          <h3>
+            {{ pharma.name }}
+            <span *ngIf="i === 0" style="font-size: 0.7rem; background: #22c55e; color: white; padding: 3px 6px; border-radius: 4px; margin-left: 8px; vertical-align: middle;">La plus proche</span>
+          </h3>
+          <span class="badge" [ngClass]="{'danger': pharma.isOnCall, 'success': !pharma.isOnCall}">
+            {{ pharma.isOnCall ? 'De garde' : 'Ouverte' }}
+          </span>
+        </div>
+        <div class="card-body">
+          <p><strong>Adresse:</strong> {{ pharma.address }}</p>
+          <p><strong>Contact:</strong> {{ pharma.contact }}</p>
+          <p><strong>Distance:</strong> {{ calculateDistanceKm(userLat, userLng, pharma.latitude, pharma.longitude) | number:'1.1-2' }} km</p>
+        </div>
+        <div class="card-footer" style="display: flex; gap: 1rem;">
+          <button class="btn btn-secondary" (click)="traceRoute(pharma.latitude, pharma.longitude)" title="Tracer l'itinéraire sur la carte" style="flex: 1;">
+            📍 Y aller
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="results-container" *ngIf="!loading && results.length > 0">
+    <!-- Carte Leaflet -->
+    <div class="map-wrapper glass-panel">
+      <div id="map" style="height: 400px; width: 100%; border-radius: 12px;"></div>
+    </div>
+    
+    <!-- Pharmacie la plus proche, affichée automatiquement -->
+    <div class="glass-panel" *ngIf="closestResult" style="margin: 1rem 0; padding: 1rem 1.25rem; border: 2px solid #22c55e; border-radius: 12px;">
+      <div style="font-weight: 700; color: #22c55e; margin-bottom: 0.35rem;">✅ Pharmacie la plus proche de vous</div>
+      <div style="font-size: 1.15rem; font-weight: 700;">{{ closestResult.pharmacy.name }}</div>
+      <div style="color: var(--text-muted); margin: 0.25rem 0 0.75rem;">
+        {{ closestResult.stock.medication?.name }} — {{ closestResult.stock.quantity }} en stock
+        <span *ngIf="closestResult.distanceKm != null"> — à {{ closestResult.distanceKm | number:'1.1-1' }} km</span>
+        <span *ngIf="closestResult.pharmacy.address"> — {{ closestResult.pharmacy.address }}</span>
+      </div>
+      <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+        <button class="btn btn-secondary" (click)="traceRoute(closestResult.pharmacy.latitude, closestResult.pharmacy.longitude)">Itinéraire</button>
+        <button class="btn btn-accent" (click)="openReservationModal(closestResult.stock)">Réserver ici</button>
+      </div>
+    </div>
+
+    <div class="results">
+      <div class="result-card glass-panel hover-glow animate-fade-in" *ngFor="let res of results; let i = index" [style.animation-delay]="(i > 15 ? 0 : i * 0.1) + 's'"
+           [style.border]="res === closestResult ? '2px solid #22c55e' : ''">
+      <div class="card-header">
+        <h3>
+          <a [routerLink]="['/pharmacy', res.pharmacy.id]" style="color: white; text-decoration: none;">{{ res.pharmacy.name }}</a>
+          <span *ngIf="res.pharmacy.isOnCall" style="font-size: 0.7rem; background: #ef4444; color: white; padding: 3px 6px; border-radius: 4px; margin-left: 8px; vertical-align: middle;">De Garde</span>
+
+          <span *ngIf="res === closestResult" style="font-size: 0.7rem; background: #22c55e; color: white; padding: 3px 6px; border-radius: 4px; margin-left: 8px; vertical-align: middle;">La plus proche</span>
+
+          <span *ngIf="res.alternative" style="font-size: 0.7rem; background: #f59e0b; color: white; padding: 3px 6px; border-radius: 4px; margin-left: 8px; vertical-align: middle;">Alternative</span>
+        </h3>
+
+        <span class="badge" [ngClass]="{'danger': res.stock.quantity <= 10, 'success': res.stock.quantity > 10}">
+          Stock: {{ res.stock.quantity }}
+        </span>
+      </div>
+      <div class="card-body">
+        <p><strong>Médicament:</strong> {{ res.stock.medication.name }}</p>
+        <p><strong>Prix indicatif:</strong> {{ res.stock.medication.indicativePrice }} FCFA</p>
+        <p><strong>Adresse:</strong> {{ res.pharmacy.address }}</p>
+        <p><strong>Distance:</strong> {{ res.distanceKm | number:'1.1-2' }} km</p>
+      </div>
+      <div class="card-footer" style="display: flex; gap: 1rem; flex-wrap: wrap;">
+        <button class="btn btn-secondary" (click)="traceRoute(res.pharmacy.latitude, res.pharmacy.longitude)" title="Tracer l'itinéraire sur la carte" style="flex: 1;">
+          📍 Y aller
+        </button>
+        <button *ngIf="res.stock.quantity > 0" class="btn btn-accent" (click)="openReservationModal(res.stock)" style="flex: 1;">
+          Réserver
+        </button>
+        <button *ngIf="res.stock.quantity === 0" class="btn btn-warning" (click)="subscribeToAlert(res.stock)" style="flex: 1; background: #f59e0b; color: white;">
+          <i class="fa-solid fa-bell"></i> M'avertir
+        </button>
+      </div>
+    </div>
+  </div>
+  </div>
+
+  <div class="no-results" *ngIf="!loading && results.length === 0 && query !== ''">
+    <p>Aucun résultat trouvé pour cette recherche.</p>
+  </div>
+
+  <!-- Modal de réservation -->
+  <div class="modal-overlay" *ngIf="showModal">
+    <div class="modal-content glass-panel animate-fade-in">
+      <h3>Réserver {{ selectedStock?.medication?.name }}</h3>
+      <p class="modal-desc">Pharmacie: {{ selectedStock?.pharmacy?.name }}</p>
+      
+      <div class="form-group">
+        <label>Votre nom</label>
+        <input type="text" class="input-field" [(ngModel)]="reservationData.patientName">
+      </div>
+      <div class="form-group">
+        <label>Votre contact (Tél)</label>
+        <input type="text" class="input-field" [(ngModel)]="reservationData.patientContact">
+      </div>
+      <div class="form-group">
+        <label>Quantité souhaitée</label>
+        <input type="number" class="input-field" [(ngModel)]="reservationData.quantity" min="1" [max]="selectedStock?.quantity">
+      </div>
+      <div class="form-group">
+        <label>Mode de réception</label>
+        <select class="input-field" [(ngModel)]="reservationData.deliveryMode">
+          <option value="RETRAIT">Retrait en pharmacie</option>
+          <option value="LIVRAISON">Livraison à domicile (+1000 FCFA)</option>
+        </select>
+      </div>
+      <div class="form-group" *ngIf="reservationData.deliveryMode === 'LIVRAISON'">
+        <label>Adresse de livraison complète</label>
+        <input type="text" class="input-field" [(ngModel)]="reservationData.deliveryAddress" placeholder="Quartier, rue, repère...">
+      </div>
+      <div class="form-group">
+        <label>Paiement</label>
+        <select class="input-field" [(ngModel)]="reservationData.paymentMethod">
+          <option value="CASH">Payer à la pharmacie (espèces)</option>
+          <option value="ORANGE_MONEY">Orange Money</option>
+          <option value="AIRTEL_MONEY">Airtel Money</option>
+        </select>
+      </div>
+      <div class="form-group" *ngIf="reservationData.paymentMethod === 'ORANGE_MONEY' || reservationData.paymentMethod === 'AIRTEL_MONEY'">
+        <label>Numéro {{ reservationData.paymentMethod === 'ORANGE_MONEY' ? 'Orange Money' : 'Airtel Money' }}</label>
+        <input type="tel" class="input-field" [(ngModel)]="reservationData.paymentPhone" placeholder="ex. 66 XX XX XX">
+        <small style="color: var(--text-muted);">Un push USSD sera simulé pour valider le paiement.</small>
+      </div>
+      <div class="form-group">
+        <label>Ordonnance (Optionnel)</label>
+        <input type="file" class="input-field" (change)="onFileSelected($event)" accept="image/*,.pdf" style="padding: 10px;">
+        <small style="color: var(--text-muted); display: block; margin-top: 5px;">Requis pour les médicaments sur prescription.</small>
+        
+        <!-- Aperçu de l'ordonnance -->
+        <div *ngIf="reservationData.prescriptionBase64" class="animate-fade-in" style="margin-top: 15px; text-align: center; background: rgba(0,0,0,0.02); padding: 10px; border-radius: 12px; border: 1px dashed var(--border);">
+          <img *ngIf="reservationData.prescriptionBase64.startsWith('data:image')" [src]="reservationData.prescriptionBase64" alt="Aperçu ordonnance" style="max-height: 160px; max-width: 100%; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);" />
+          <div *ngIf="!reservationData.prescriptionBase64.startsWith('data:image')" style="color: var(--primary); font-weight: 600; padding: 10px;">
+            📄 Document PDF joint avec succès
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-actions">
+        <button class="btn" (click)="closeReservationModal()">Annuler</button>
+        <button class="btn btn-primary" (click)="submitReservation()">Confirmer la réservation</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast de notification -->
+  <div class="toast success animate-fade-in" *ngIf="showToast">
+    Réservation confirmée avec succès !
+  </div>
+</div>

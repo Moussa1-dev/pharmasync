@@ -1,0 +1,15 @@
+.dashboard {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.table-wrapper {
+  padding: 1.5rem;
+  background: #fff;
+  border-radius: 20px;
+}
+
+.btn-danger {
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  color: white;
+}

@@ -1,0 +1,106 @@
+<div class="patient-page animate-fade-in">
+  <div class="patient-hero glass-panel">
+    <div>
+      <span class="mini-label">Espace patient</span>
+      <h2>Mes réservations & ordonnances</h2>
+      <p>Suivez le statut de vos demandes et retrouvez vos ordonnances enregistrées.</p>
+    </div>
+    <a routerLink="/search" class="btn btn-primary">
+      <i class="fa-solid fa-magnifying-glass"></i> Nouvelle recherche
+    </a>
+  </div>
+
+  <div *ngIf="offline" class="offline-banner">
+    <i class="fa-solid fa-wifi"></i>
+    Mode hors-ligne — affichage des dernières données mises en cache.
+  </div>
+
+  <div class="lookup-bar glass-panel" *ngIf="!(auth.isLoggedIn$ | async)">
+    <label *ngIf="!guestConnected">Retrouver mes réservations avec mon email / téléphone</label>
+    <label *ngIf="guestConnected">Connecté en tant que : <strong>{{ contactLookup }}</strong></label>
+    <div class="lookup-row">
+      <input class="input-field" [(ngModel)]="contactLookup" placeholder="ex. patient@gmail.com ou 60000000" (keyup.enter)="lookupByContact()">
+      <button class="btn btn-primary" (click)="lookupByContact()">Chercher</button>
+      <button class="btn btn-secondary" style="margin-left:0.5rem;" *ngIf="!guestConnected" (click)="signInAsGuest()">Se connecter (invité)</button>
+      <button class="btn btn-outline" style="margin-left:0.5rem;" *ngIf="!guestConnected" (click)="signInAsGuest()">Continuer sans contact</button>
+      <button class="btn btn-outline" style="margin-left:0.5rem;" *ngIf="guestConnected" (click)="signOutGuest()">Se déconnecter</button>
+    </div>
+  </div>
+
+  <div class="filter-row">
+    <button class="filter-chip" [class.active]="filterStatus === 'all'" (click)="filterStatus = 'all'">Toutes</button>
+    <button class="filter-chip" [class.active]="filterStatus === 'PENDING'" (click)="filterStatus = 'PENDING'">En attente</button>
+    <button class="filter-chip" [class.active]="filterStatus === 'CONFIRMED'" (click)="filterStatus = 'CONFIRMED'">Confirmées</button>
+    <button class="filter-chip" [class.active]="filterStatus === 'COMPLETED'" (click)="filterStatus = 'COMPLETED'">Terminées</button>
+  </div>
+
+  <div *ngIf="loading" class="loading">Chargement…</div>
+
+  <div class="reservation-grid" *ngIf="!loading">
+    <article class="res-card glass-panel" *ngFor="let r of filtered()">
+      <div class="res-top">
+        <strong>#{{ r.id }} — {{ r.stock?.medication?.name || 'Médicament' }}</strong>
+        <span class="status-badge" [ngClass]="statusClass(r.status)">{{ statusLabel(r.status) }}</span>
+      </div>
+      <p><i class="fa-solid fa-hospital"></i> {{ r.stock?.pharmacy?.name }}</p>
+      <p><i class="fa-solid fa-boxes-stacked"></i> Quantité : {{ r.quantity }}</p>
+      <p><i class="fa-solid fa-truck"></i> {{ r.deliveryMode === 'LIVRAISON' ? 'Livraison' : 'Retrait' }}
+        <span *ngIf="r.deliveryAddress"> — {{ r.deliveryAddress }}</span>
+      </p>
+      <p *ngIf="r.paymentMethod">
+        <i class="fa-solid fa-mobile-screen"></i>
+        {{ paymentLabel(r) }}
+        <span *ngIf="r.amountDue"> — {{ r.amountDue }} FCFA</span>
+      </p>
+      <p class="muted"><i class="fa-regular fa-clock"></i> {{ r.createdAt | date:'dd/MM/yyyy HH:mm' }}</p>
+      <button
+        class="btn btn-primary"
+        *ngIf="(r.paymentStatus === 'PENDING' || r.paymentStatus === 'UNPAID') && (r.paymentMethod === 'ORANGE_MONEY' || r.paymentMethod === 'AIRTEL_MONEY')"
+        (click)="confirmPayment(r)">
+        Confirmer le paiement Mobile Money
+      </button>
+      <button class="btn btn-secondary" style="margin-left: 0.5rem;" (click)="openChat(r)">💬 Contacter la pharmacie</button>
+      <div *ngIf="r.prescriptionBase64" class="ordo-preview">
+        <span class="mini-label">Ordonnance</span>
+        <img [src]="r.prescriptionBase64" alt="Ordonnance" />
+      </div>
+    </article>
+
+    <div class="empty glass-panel" *ngIf="filtered().length === 0">
+      <i class="fa-solid fa-clipboard-list"></i>
+      <p>Aucune réservation pour le moment.</p>
+      <a routerLink="/search" class="btn btn-secondary">Rechercher un médicament</a>
+    </div>
+  </div>
+
+  <section class="ordo-section" *ngIf="prescriptions.length > 0">
+    <h3>Ordonnances enregistrées</h3>
+    <div class="ordo-grid">
+      <div class="ordo-card glass-panel" *ngFor="let r of prescriptions">
+        <img [src]="r.prescriptionBase64" alt="Ordonnance #{{ r.id }}" />
+        <small>Réservation #{{ r.id }} — {{ r.stock?.medication?.name }}</small>
+      </div>
+    </div>
+  </section>
+</div>
+
+<div class="modal-overlay" *ngIf="chatOpen" style="position:fixed; inset:0; background:rgba(0,0,0,0.45); display:flex; align-items:center; justify-content:center; z-index:1000;">
+  <div class="glass-panel" style="width: min(520px, 92vw); padding: 1.25rem;">
+    <h3>Chat — réservation #{{ chatOpen.id }}</h3>
+    <p style="color: var(--text-muted);">{{ chatOpen.stock?.pharmacy?.name }}</p>
+    <div style="max-height: 260px; overflow-y: auto; display:flex; flex-direction:column; gap:0.55rem; margin: 1rem 0;">
+      <div *ngFor="let m of chatMessages"
+           [style.align-self]="m.senderRole === 'PATIENT' ? 'flex-end' : 'flex-start'"
+           style="max-width:85%; padding:0.55rem 0.75rem; border-radius:12px; background: rgba(16,185,129,0.12);">
+        <strong style="font-size:0.75rem;">{{ m.senderName }}</strong>
+        <div>{{ m.content }}</div>
+      </div>
+      <div *ngIf="!chatMessages.length" style="text-align:center; color:var(--text-muted);">Aucun message</div>
+    </div>
+    <div style="display:flex; gap:0.5rem;">
+      <input class="input-field" style="flex:1" [(ngModel)]="chatDraft" (keyup.enter)="sendChat()" placeholder="Votre message…">
+      <button class="btn btn-primary" (click)="sendChat()">Envoyer</button>
+    </div>
+    <button class="btn btn-secondary" style="margin-top:0.75rem;" (click)="closeChat()">Fermer</button>
+  </div>
+</div>

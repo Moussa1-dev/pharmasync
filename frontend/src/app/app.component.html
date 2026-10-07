@@ -1,0 +1,167 @@
+<div class="app-layout">
+  <div class="sidebar-backdrop" *ngIf="sidebarOpen" (click)="toggleSidebar()"></div>
+
+  <aside class="sidebar" [class.open]="sidebarOpen">
+    <div class="sidebar-container">
+      <div class="logo-wrapper">
+        <a routerLink="/home" class="logo" aria-label="Accueil PharmaSync" (click)="sidebarOpen = false">
+          <img src="assets/logo-pharmasync.svg" alt="Logo PharmaSync" class="brand-logo" />
+          <h1>Pharma<span class="accent">Sync</span></h1>
+        </a>
+        <button class="sidebar-close" (click)="toggleSidebar()" aria-label="Fermer le menu">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <nav class="nav-group" aria-label="Navigation principale">
+        <span class="nav-section-label">Patient</span>
+        <a routerLink="/home" class="nav-link" routerLinkActive="active" [routerLinkActiveOptions]="{exact: true}" (click)="sidebarOpen = false">
+          <span class="nav-icon"><i class="fa-solid fa-house"></i></span> Accueil
+        </a>
+        <a routerLink="/search" class="nav-link" routerLinkActive="active" (click)="sidebarOpen = false">
+          <span class="nav-icon"><i class="fa-solid fa-magnifying-glass-location"></i></span> Recherche
+        </a>
+        <a routerLink="/patient" class="nav-link" routerLinkActive="active" (click)="sidebarOpen = false">
+          <span class="nav-icon"><i class="fa-solid fa-user-injured"></i></span> Espace patient
+        </a>
+
+        <span class="nav-section-label">Gestion pharmacie</span>
+        <a routerLink="/dashboard" class="nav-link" routerLinkActive="active" [routerLinkActiveOptions]="{ paths: 'exact', queryParams: 'exact', matrixParams: 'ignored', fragment: 'ignored' }" (click)="sidebarOpen = false">
+          <span class="nav-icon"><i class="fa-solid fa-chart-pie"></i></span> Tableau de bord
+        </a>
+        <a routerLink="/dashboard" [queryParams]="{ tab: 'stocks' }" class="nav-link" routerLinkActive="active" (click)="sidebarOpen = false">
+          <span class="nav-icon"><i class="fa-solid fa-boxes-stacked"></i></span> Stocks
+        </a>
+        <a routerLink="/dashboard" [queryParams]="{ tab: 'reservations' }" class="nav-link" routerLinkActive="active" (click)="sidebarOpen = false">
+          <span class="nav-icon"><i class="fa-solid fa-clipboard-list"></i></span> Réservations
+        </a>
+        <a routerLink="/pos" class="nav-link" routerLinkActive="active" (click)="sidebarOpen = false">
+          <span class="nav-icon"><i class="fa-solid fa-cash-register"></i></span> Vente (POS)
+        </a>
+        <a routerLink="/gardes" class="nav-link" routerLinkActive="active" (click)="sidebarOpen = false">
+          <span class="nav-icon"><i class="fa-solid fa-moon"></i></span> Planning gardes
+        </a>
+        <div class="pharmacy-switcher" *ngIf="authService.isPharmacistOrAdmin() && (authService.pharmacies$ | async)?.length">
+          <label class="nav-section-label">Pharmacie active</label>
+          <select class="pharmacy-select" [ngModel]="authService.getActivePharmacyId()" (ngModelChange)="onPharmacyChange($event)">
+            <option *ngFor="let p of authService.pharmacies$ | async" [ngValue]="p.id">{{ p.name }}</option>
+          </select>
+        </div>
+        <a routerLink="/stats" class="nav-link" routerLinkActive="active" (click)="sidebarOpen = false">
+          <span class="nav-icon"><i class="fa-solid fa-chart-line"></i></span> Statistiques
+        </a>
+        <a routerLink="/orders" class="nav-link" routerLinkActive="active" (click)="sidebarOpen = false">
+          <span class="nav-icon"><i class="fa-solid fa-truck"></i></span> Commandes fournisseurs
+        </a>
+        <a routerLink="/notifications" class="nav-link" routerLinkActive="active" (click)="sidebarOpen = false">
+          <span class="nav-icon"><i class="fa-solid fa-bell"></i></span> Notifications
+        </a>
+
+        <ng-container *ngIf="authService.isAdmin()">
+          <span class="nav-section-label">Administration</span>
+          <a routerLink="/admin" class="nav-link" routerLinkActive="active" (click)="sidebarOpen = false">
+            <span class="nav-icon"><i class="fa-solid fa-gear"></i></span> Administration
+          </a>
+        </ng-container>
+
+        <a *ngIf="!(authService.isLoggedIn$ | async)" routerLink="/login" [queryParams]="{ returnUrl: '/dashboard' }" class="nav-link nav-link-login" routerLinkActive="active" (click)="sidebarOpen = false">
+          <span class="nav-icon"><i class="fa-solid fa-right-to-bracket"></i></span> Connexion pro
+        </a>
+      </nav>
+
+      <div class="nav-actions">
+        <button (click)="toggleTheme()" class="theme-toggle-btn" aria-label="Basculer le thème">
+          <span class="nav-icon"><i [class]="isDarkMode ? 'fa-solid fa-sun' : 'fa-solid fa-moon'"></i></span>
+          {{ isDarkMode ? 'Mode Clair' : 'Mode Sombre' }}
+        </button>
+        <a *ngIf="authService.isLoggedIn$ | async" (click)="authService.logout()" class="nav-link logout-link" tabindex="0">
+          <span class="nav-icon"><i class="fa-solid fa-arrow-right-from-bracket"></i></span> Déconnexion
+        </a>
+      </div>
+    </div>
+  </aside>
+
+  <div class="main-wrapper">
+    <header class="topbar">
+      <div class="topbar-left">
+        <button class="menu-toggle" (click)="toggleSidebar()" aria-label="Ouvrir le menu">
+          <i class="fa-solid fa-bars"></i>
+        </button>
+        <div class="page-heading">
+          <span class="page-eyebrow">PharmaSync</span>
+          <h2 class="page-title">{{ pageTitle }}</h2>
+        </div>
+      </div>
+
+      <div class="topbar-search" (keyup.enter)="onQuickSearch()">
+        <i class="fa-solid fa-magnifying-glass"></i>
+        <input type="text" placeholder="Rechercher un médicament..." [(ngModel)]="quickSearch" />
+        <button class="search-submit" (click)="onQuickSearch()" aria-label="Lancer la recherche">
+          <i class="fa-solid fa-arrow-right"></i>
+        </button>
+      </div>
+
+      <div class="topbar-actions">
+        <div class="notif-wrap" *ngIf="authService.isLoggedIn$ | async">
+          <button class="notif-btn" (click)="toggleNotif()" aria-label="Notifications">
+            <i class="fa-solid fa-bell"></i>
+            <span class="notif-badge" *ngIf="unreadCount > 0">{{ unreadCount > 9 ? '9+' : unreadCount }}</span>
+          </button>
+          <div class="notif-panel glass-panel" *ngIf="notifOpen">
+            <div class="notif-head">
+              <strong>Notifications</strong>
+              <button type="button" class="linkish" (click)="markAllRead()" *ngIf="unreadCount > 0">Tout lu</button>
+            </div>
+            <div class="notif-list" *ngIf="notifications.length; else emptyNotif">
+              <button type="button" class="notif-item" *ngFor="let n of notifications" [class.unread]="!n.readFlag" (click)="openNotif(n)">
+                <span class="notif-type">{{ n.type }}</span>
+                <strong>{{ n.title }}</strong>
+                <small>{{ n.message }}</small>
+              </button>
+            </div>
+            <ng-template #emptyNotif>
+              <p class="notif-empty">Aucune notification</p>
+            </ng-template>
+          </div>
+        </div>
+
+        <div class="topbar-profile" *ngIf="authService.isLoggedIn$ | async">
+          <div class="profile-info">
+            <span>{{ authService.getRoleLabel() }}</span>
+            <small>Connecté</small>
+          </div>
+          <div class="profile-avatar" [ngClass]="getAvatarClass()">
+            <i class="fa-solid fa-user"></i>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <div class="offline-strip" *ngIf="isOffline">
+      <i class="fa-solid fa-wifi"></i> Vous êtes hors-ligne — certaines données peuvent provenir du cache.
+    </div>
+
+    <div class="pro-banner" *ngIf="!(authService.isLoggedIn$ | async)">
+      <i class="fa-solid fa-circle-info"></i>
+      <span>Connectez-vous avec le compte <strong>Pharmacien</strong> pour accéder au tableau de bord, stocks, ventes et réservations.</span>
+      <a routerLink="/login" [queryParams]="{ returnUrl: '/dashboard' }" class="pro-banner-link">Se connecter</a>
+    </div>
+
+    <main class="main-content">
+      <router-outlet></router-outlet>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        <p>&copy; 2026 PharmaSync — Projet de fin d'étude</p>
+        <div class="footer-links">
+          <a routerLink="/search">Recherche</a>
+          <a routerLink="/dashboard">Tableau de bord</a>
+          <a routerLink="/login">Connexion</a>
+        </div>
+      </div>
+    </footer>
+  </div>
+</div>
+
+<app-chatbot></app-chatbot>

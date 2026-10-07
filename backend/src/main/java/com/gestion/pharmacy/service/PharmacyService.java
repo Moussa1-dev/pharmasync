@@ -197,7 +197,8 @@ public class PharmacyService {
                    Math.cos(Math.toRadians(lat1)) * Math.cos(Math.toRadians(lat2)) *
                    Math.sin(dLon / 2) * Math.sin(dLon / 2);
         double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-        return EARTH_RADIUS * c;
+        // On multiplie par 1.3 pour simuler la distance routière (cohérence avec le frontend)
+        return (EARTH_RADIUS * c) * 1.3;
     }
 
     public List<com.gestion.pharmacy.entity.Pharmacy> findNearestPharmacies(Double lat, Double lng) {

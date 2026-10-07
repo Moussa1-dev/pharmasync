@@ -1,0 +1,136 @@
+<div class="stats-page animate-fade-in">
+  <div class="page-header" style="display: flex; justify-content: space-between; align-items: center;">
+    <div>
+      <p class="eyebrow">Tableau de bord analytique avancé</p>
+      <h2>Statistiques & Prédictions - {{ auth.getActivePharmacyName() }}</h2>
+    </div>
+    <div style="display: flex; gap: 1rem; align-items: center;">
+      <button class="btn btn-primary" (click)="exportCSV()">
+        <i class="fa-solid fa-file-csv"></i> Exporter CSV
+      </button>
+      <span class="status-pill success">Système ML actif</span>
+    </div>
+  </div>
+
+  <div class="stats-grid">
+    <div class="stat-card glass-panel">
+      <div class="stat-icon">📦</div>
+      <div>
+        <div class="label">Unités en stock</div>
+        <div class="value">{{ totalStock }}</div>
+      </div>
+    </div>
+
+    <div class="stat-card glass-panel warning">
+      <div class="stat-icon">⚠️</div>
+      <div>
+        <div class="label">Produits faibles</div>
+        <div class="value">{{ lowStockCount }}</div>
+      </div>
+    </div>
+
+    <div class="stat-card glass-panel danger">
+      <div class="stat-icon">🏥</div>
+      <div>
+        <div class="label">Pharmacies de garde</div>
+        <div class="value">{{ onCallCount }}</div>
+      </div>
+    </div>
+
+    <div class="stat-card glass-panel accent">
+      <div class="stat-icon">💰</div>
+      <div>
+        <div class="label">Chiffre d’affaires</div>
+        <div class="value">{{ totalRevenue | number:'1.2-2' }} FCFA</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="insight-row">
+    <div class="glass-panel insight-card">
+      <div class="card-top">
+        <h3>Indice de santé du stock</h3>
+        <span class="status-pill primary">{{ stockHealthRate }}%</span>
+      </div>
+      <div class="progress-track">
+        <div class="progress-fill" [style.width.%]="stockHealthRate"></div>
+      </div>
+      <p>Le stock global est sain lorsque plus de 70 % des produits sont au-dessus du seuil critique.</p>
+    </div>
+
+    <div class="glass-panel insight-card">
+      <div class="card-top">
+        <h3>Top 5 médicaments</h3>
+      </div>
+      <ul class="mini-list">
+        <li *ngFor="let med of topMedicines; let i = index">
+          <span>{{ i + 1 }}. {{ med.name }}</span>
+          <strong>{{ med.quantity }} unités</strong>
+        </li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="chart-grid">
+    <div class="glass-panel chart-card" style="grid-column: span 2;">
+      <h3><i class="fa-solid fa-chart-line" style="color: #3b82f6; margin-right: 8px;"></i> Évolution du Chiffre d'Affaires (7 derniers jours)</h3>
+      <div style="height: 250px;">
+        <canvas id="trendChart"></canvas>
+      </div>
+    </div>
+
+    <div class="glass-panel chart-card">
+      <h3>Quantité en stock</h3>
+      <canvas id="stockChart"></canvas>
+    </div>
+
+    <div class="glass-panel chart-card">
+      <h3>Répartition du stock</h3>
+      <canvas id="statusChart"></canvas>
+    </div>
+  </div>
+
+  <div class="prediction-section" style="margin-top: 2rem;">
+    <div class="glass-panel">
+      <div style="padding: 1.5rem; border-bottom: 1px solid rgba(255, 255, 255, 0.1);">
+        <h3><i class="fa-solid fa-brain" style="color: #a855f7; margin-right: 8px;"></i> Prédiction des Ruptures de Stock (Machine Learning)</h3>
+        <p style="color: var(--text-muted); font-size: 0.9rem; margin-top: 5px;">Le système analyse la vélocité des ventes pour estimer la date d'épuisement de chaque produit.</p>
+      </div>
+      <div class="table-container" style="overflow-x: auto;">
+        <table class="data-table" style="width: 100%; border-collapse: collapse;">
+          <thead>
+            <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.1);">
+              <th style="padding: 1rem; text-align: left;">Médicament</th>
+              <th style="padding: 1rem; text-align: right;">Stock Actuel</th>
+              <th style="padding: 1rem; text-align: right;">Vélocité (unités/jour)</th>
+              <th style="padding: 1rem; text-align: right;">Jours Restants Estimés</th>
+              <th style="padding: 1rem; text-align: center;">Statut Prédictif</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let p of predictions" style="border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
+              <td style="padding: 1rem;"><strong>{{ p.name }}</strong></td>
+              <td style="padding: 1rem; text-align: right;">{{ p.quantity }}</td>
+              <td style="padding: 1rem; text-align: right;">{{ p.velocity }}</td>
+              <td style="padding: 1rem; text-align: right;">
+                <strong [style.color]="p.daysRemaining < 7 ? '#ef4444' : (p.daysRemaining < 30 ? '#f59e0b' : '#22c55e')">
+                  {{ p.daysRemaining }} jours
+                </strong>
+              </td>
+              <td style="padding: 1rem; text-align: center;">
+                <span class="badge" [ngClass]="{'danger': p.status === 'Critique', 'warning': p.status === 'Attention', 'success': p.status === 'Normal'}">
+                  {{ p.status }}
+                </span>
+              </td>
+            </tr>
+            <tr *ngIf="predictions.length === 0">
+              <td colspan="5" style="padding: 2rem; text-align: center; color: var(--text-muted);">
+                Données insuffisantes pour établir des prédictions.
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>

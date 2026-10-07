@@ -59,11 +59,11 @@ public class DataSeeder {
                 System.out.println("===============================================");
             }
 
-            if (!userRepository.existsByEmail("contact@pharmasalut.td")) {
+            if (!userRepository.existsByEmail("pharmacien@pharmasync.com")) {
                 User pharma = new User();
                 pharma.setNom("Pharmacie");
                 pharma.setPrenom("Salut");
-                pharma.setEmail("contact@pharmasalut.td");
+                pharma.setEmail("pharmacien@pharmasync.com");
                 pharma.setPassword(passwordEncoder.encode("pharma123"));
                 pharma.setRole(Role.ROLE_PHARMACIEN);
                 pharma.setTelephone("66895418");
@@ -99,7 +99,7 @@ public class DataSeeder {
             }
 
             // Multi-pharmacies : pharmacien Salut gère pharmacie 1 et 2
-            userRepository.findByEmail("contact@pharmasalut.td").ifPresent(pharma -> {
+            userRepository.findByEmail("pharmacien@pharmasync.com").ifPresent(pharma -> {
                 List<Pharmacy> all = pharmacyRepository.findAll();
                 if (all.size() >= 2 && (pharma.getPharmacies() == null || pharma.getPharmacies().isEmpty())) {
                     Set<Pharmacy> assigned = new HashSet<>();

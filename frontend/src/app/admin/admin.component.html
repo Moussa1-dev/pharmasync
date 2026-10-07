@@ -1,0 +1,97 @@
+<div class="dashboard animate-fade-in">
+  <h2>Administration de la plateforme</h2>
+  <p class="subtitle">Gérez les pharmacies et leur visibilité sur PharmaSync.</p>
+
+  <div style="display: flex; justify-content: flex-end; margin-bottom: 1.5rem; gap: 1rem;">
+    <button class="btn btn-warning" (click)="openBroadcast()"><i class="fa-solid fa-bullhorn"></i> Diffuser une alerte globale</button>
+    <button class="btn btn-primary" (click)="openCreate()">+ Ajouter une pharmacie</button>
+  </div>
+
+  <div class="glass-panel table-wrapper" *ngIf="!showForm">
+    <table>
+      <thead>
+        <tr>
+          <th>Nom</th>
+          <th>Adresse</th>
+          <th>Contact</th>
+          <th>Garde</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let pharmacy of pharmacies">
+          <td>{{ pharmacy.name }}</td>
+          <td>{{ pharmacy.address }}</td>
+          <td>{{ pharmacy.contact }}</td>
+          <td>{{ pharmacy.isOnCall ? 'Oui' : 'Non' }}</td>
+          <td>
+            <div class="action-buttons" style="display: flex; gap: 0.5rem;">
+              <button class="btn btn-secondary" (click)="openEdit(pharmacy)">Modifier</button>
+              <button class="btn btn-danger" (click)="deletePharmacy(pharmacy)">Supprimer</button>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="modal-overlay" *ngIf="showForm">
+    <div class="modal-content glass-panel animate-fade-in">
+      <h3>{{ formMode === 'create' ? 'Ajouter une pharmacie' : 'Modifier la pharmacie' }}</h3>
+
+      <div class="form-group">
+        <label>Nom</label>
+        <input class="input-field" [(ngModel)]="pharmacyForm.name">
+      </div>
+      <div class="form-group">
+        <label>Adresse</label>
+        <input class="input-field" [(ngModel)]="pharmacyForm.address">
+      </div>
+      <div class="form-group">
+        <label>Contact</label>
+        <input class="input-field" [(ngModel)]="pharmacyForm.contact">
+      </div>
+      <div class="form-group">
+        <label>Latitude</label>
+        <input type="number" class="input-field" [(ngModel)]="pharmacyForm.latitude">
+      </div>
+      <div class="form-group">
+        <label>Longitude</label>
+        <input type="number" class="input-field" [(ngModel)]="pharmacyForm.longitude">
+      </div>
+      <div class="form-group">
+        <label style="display:flex; align-items:center; gap:0.5rem;">
+          <input type="checkbox" [(ngModel)]="pharmacyForm.isOnCall">
+          Pharmacie de garde
+        </label>
+      </div>
+
+      <div class="modal-actions">
+        <button class="btn btn-secondary" (click)="cancel()">Annuler</button>
+        <button class="btn btn-primary" (click)="save()">Enregistrer</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" *ngIf="showBroadcastForm">
+    <div class="modal-content glass-panel animate-fade-in">
+      <h3>Diffuser une alerte globale</h3>
+      <p class="subtitle" style="margin-bottom: 1rem;">Cette alerte sera envoyée à tous les utilisateurs (patients et pharmaciens).</p>
+
+      <div class="form-group">
+        <label>Titre de l'alerte</label>
+        <input class="input-field" [(ngModel)]="broadcastForm.title" placeholder="Ex: Alerte sanitaire, Maintenance...">
+      </div>
+      <div class="form-group">
+        <label>Message</label>
+        <textarea class="input-field" [(ngModel)]="broadcastForm.message" rows="4"></textarea>
+      </div>
+
+      <div class="modal-actions">
+        <button class="btn btn-secondary" (click)="cancelBroadcast()">Annuler</button>
+        <button class="btn btn-warning" (click)="sendBroadcast()">Envoyer l'alerte</button>
+      </div>
+    </div>
+  </div>
+
+</div>

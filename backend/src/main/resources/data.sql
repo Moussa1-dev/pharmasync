@@ -1,10 +1,13 @@
+-- Pharmacies réelles de N'Djamena : nom, adresse, téléphone et position GPS
+-- relevés sur Google Maps (septembre 2026). Le statut "de garde" (is_on_call)
+-- et les stocks ci-dessous sont des données de DÉMONSTRATION.
 INSERT INTO pharmacy (name, address, contact, latitude, longitude, is_on_call) VALUES
-('Pharmacie du Salut', 'Avenue Pascal Yoadoumadji, Chagoua, N''Djamena', '+235 66 89 54 18', 12.0965, 15.0673, true),
-('Pharmacie du Béguinage', 'Quartier Béguinage, Rue du Havre, N''Djamena', '+235 66 36 57 57', 12.1158, 15.0645, false),
-('Pharmacie Santé Assurée', 'Boulevard du Président N''Garta Tombalbaye, N''Djamena', '+235 62 11 22 33', 12.1112, 15.0445, true),
-('Pharmacie Bahry', 'Rond-Point Hamama, N''Djamena', '+235 63 44 55 66', 12.1287, 15.0423, false),
-('Pharmacie Providence', 'Quartier Moursal, N''Djamena', '+235 66 22 33 44', 12.1001, 15.0501, false),
-('Pharmacie de la Nation', 'Avenue Charles de Gaulle, N''Djamena', '+235 62 34 56 78', 12.1150, 15.0390, true);
+('Pharmacie du Salut', '4112 Avenue Pascal Yoadoumadji, N''Djamena', '+235 66 30 46 98', 12.0893523, 15.0919092, true),
+('Pharmacie Béguinage', 'Rue du Havre, N''Djamena', '+235 66 36 57 57', 12.1163732, 15.0389880, false),
+('Pharmacie La Place', 'Avenue du Général Charles de Gaulle (face à la Place de la Nation), N''Djamena', '+235 66 01 03 02', 12.1111266, 15.0391510, true),
+('Pharmacie La Vaillance', 'Moursal, N''Djamena', '+235 66 30 70 41', 12.1037872, 15.0782705, false),
+('Pharmacie du Sacré-Cœur', 'Avenue du Lycée de Gassi, N''Djamena', '+235 66 89 25 48', 12.0885640, 15.1408380, false),
+('Dépôt Pharmaceutique Al-Salama', 'BP 926, N''Djamena', '+235 22 51 15 11', 12.1280896, 15.0501900, true);
 
 INSERT INTO medication (name, description, indicative_price, category, barcode) VALUES
 ('Coartem 20/120mg', 'Traitement de première intention du paludisme', 2500, 'Antipaludéen', '3400930000001'),
