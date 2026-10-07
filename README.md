@@ -1,93 +1,64 @@
-# ⚕️ Application de Gestion des Pharmacies et Disponibilité des Médicaments
+# ⚕️ PharmaSync — Gestion des pharmacies et recherche de médicaments
 
-![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)
-![Spring Boot](https://img.shields.io/badge/Spring%20Boot-4.1.x-brightgreen.svg)
-![Angular](https://img.shields.io/badge/Angular-18.x-red.svg)
-![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15.x-blue.svg)
-![PWA](https://img.shields.io/badge/Mobile-PWA-02569B.svg)
+![Spring Boot](https://img.shields.io/badge/Spring%20Boot-4-6DB33F) ![Java](https://img.shields.io/badge/Java-21-orange) ![Angular](https://img.shields.io/badge/Angular-18-DD0031) ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-H2%20en%20dev-336791)
 
-> **Projet de Fin d'Études**
-> - **Réalisé par :** MOUSSA HACHIM HASSABALLAH
-> - **Encadrant :** M. BRAHIM ISSA HASSABALLAH
-> - **Année académique :** 2025-2026
+> **Projet de Fin d'Études — ENASTIC**
+> Licence en Développement Web et Mobile — Option : Développement des applications Web & Mobile
+> **Réalisé par :** MOUSSA HACHIM HASSABALLAH
+> **Encadrant :** M. BRAHIM ISSA HASSABALLAH, enseignant à l'ENASTIC
+> **Année académique :** 2025-2026
 
-Cette application permet aux patients de localiser rapidement les médicaments disponibles tout en offrant aux pharmacies un outil moderne de gestion des stocks.
+PharmaSync permet à un patient de **trouver, avant de se déplacer, la pharmacie la plus proche qui a le médicament en stock**, et donne aux pharmaciens un **outil de gestion de stock avec alertes en temps réel**.
 
 ---
 
-## 📖 Chapitre I : Présentation générale du projet
-**Contexte & Problématique :** La difficulté pour les patients de trouver rapidement un médicament disponible, particulièrement lors des gardes de nuit ou des situations d'urgence.
-**Objectifs :** Centraliser les stocks des pharmacies, offrir un moteur de recherche en temps réel par géolocalisation, et fournir un tableau de bord aux pharmaciens.
-**Technologies :** 
-- Backend : **Spring Boot** (Java)
-- Frontend Web : **Angular 18** (PWA mobile-first, installable sur smartphone)
-- Base de données : **PostgreSQL** (prod) / **H2** (dev, profil par défaut)
+## ✨ Fonctionnalités
 
----
+**Côté patient**
+- Recherche de médicaments (synonymes marque / DCI : Doliprane ↔ paracétamol).
+- Pharmacie la plus proche **mise en avant automatiquement**, avec itinéraire.
+- Position par GPS, par Wi-Fi, par **nom de quartier** (79 quartiers de N'Djamena) ou par clic sur la carte.
+- Pharmacies de garde, réservation en ligne (retrait ou livraison), paiement Mobile Money **simulé**.
+- Création de compte patient, mot de passe oublié, mode hors connexion (derniers résultats en cache).
 
-## 👥 Chapitre II : Analyse et conception
-### Acteurs du système :
-1. **Administrateur :** Gère la plateforme globale, ajoute de nouvelles pharmacies.
-2. **Pharmacien :** Met à jour son stock, gère les réservations (validation/livraison), consulte ses statistiques.
-3. **Patient :** Recherche des médicaments, localise les pharmacies de garde, trace son itinéraire, effectue des réservations.
+**Côté pharmacien / administrateur**
+- Tableau de bord, stocks par lot, péremptions, mouvements, import CSV.
+- **Alertes en temps réel** (WebSocket) : stock bas, rupture, péremption proche.
+- Réservations, vente au comptoir (POS) avec facture PDF, planning des gardes, statistiques.
+- Choix de la « pharmacie active » : toutes les pages suivent la pharmacie choisie.
+- Un pharmacien ne peut modifier que les pharmacies qui lui sont assignées.
 
-### Conception UML & Base de données :
-Le système repose sur un modèle relationnel robuste modélisant les `Pharmacy`, `Medication`, `Stock` et `Reservation`.
+## 🧰 Technologies
 
----
+| Partie | Technologie |
+|---|---|
+| Backend | Spring Boot 4 (Java 21), Spring Security + JWT, WebSocket (STOMP) |
+| Frontend | Angular 18 (PWA), Leaflet / OpenStreetMap, Chart.js |
+| Base de données | PostgreSQL (prod) / H2 en mémoire (dev, par défaut) |
+| Tests | JUnit 5 (backend), Jasmine / Karma (frontend : 14 tests) |
+| Intégration continue | GitHub Actions |
 
-## 💻 Chapitre III : Réalisation
-L'architecture est de type **Client-Serveur** :
-- **Développement du Back-end :** Création d'API REST sécurisées avec Spring Boot. Logique métier pour le calcul spatial (algorithme de Haversine pour la proximité).
-- **Application Web (Angular) :** Interface "Midnight Dark" esthétique avec intégration de cartes interactives (Leaflet), recherche vocale (Speech-to-Text), et tableaux de bord analytiques (Chart.js).
-- **Base PostgreSQL :** Stockage relationnel fiable pour les transactions des réservations. (Une base in-memory H2 est incluse pour faciliter les tests du jury).
+## 🚀 Lancer le projet sur son ordinateur
 
----
+**Prérequis :** Java 21+, Node.js 20+ et npm.
 
-## 🧪 Chapitre IV : Tests, résultats et perspectives
-- **Tests Fonctionnels :** Couverture des services Angular via Jasmine/Karma (`api.service.spec.ts`).
-- **Résultats attendus :** Une plateforme fluide, réduisant drastiquement le temps de recherche d'un médicament pour un patient.
-- **Limites et Évolutions (Perspectives implémentées / à venir) :**
-  - ✅ **Réservation :** Implémenté de bout en bout avec upload d'ordonnance.
-  - ✅ **Notifications :** Système de logs asynchrones simulant l'envoi de SMS/Email.
-  - ✅ **Commande en ligne & Livraison :** Choix entre retrait en pharmacie et livraison à domicile.
-
----
-
-## 🚀 Installation & Lancement (Environnement Jury)
-
-> **Mode rapide (recommandé pour la soutenance)** : le profil `dev` utilise une base **H2 en mémoire** — aucune installation PostgreSQL requise.
-
-### Prérequis
-- Java 21+
-- Node.js 20+ et npm
-- *(Optionnel)* Docker pour PostgreSQL en mode production
-
-### 1️⃣ Lancement du Backend (Spring Boot)
+**1. Backend (serveur)**
 ```bash
 cd backend
-./mvnw spring-boot:run
+./mvnw spring-boot:run          # Windows : mvnw.cmd spring-boot:run
 ```
-L'API sera disponible sur `http://localhost:8080`.
+API : http://localhost:8081 — Swagger : http://localhost:8081/swagger-ui/
+Console H2 : http://localhost:8081/h2-console (JDBC URL : `jdbc:h2:mem:pharmacy_db`)
 
-| Profil | Commande | Base de données |
-|--------|----------|-----------------|
-| **dev** (défaut) | `./mvnw spring-boot:run` | H2 en mémoire |
-| **prod** | `SPRING_PROFILES_ACTIVE=prod ./mvnw spring-boot:run` | PostgreSQL |
-
-**Documentation API (Swagger)** : [http://localhost:8080/swagger-ui/](http://localhost:8080/swagger-ui/)
-
-**Console H2** (profil dev) : [http://localhost:8080/h2-console](http://localhost:8080/h2-console) — JDBC URL : `jdbc:h2:mem:pharmacy_db`
-
-### 2️⃣ Lancement du Frontend (Angular Web / PWA)
+**2. Frontend (site)**
 ```bash
 cd frontend
 npm install
 npm start
 ```
-L'application web sera disponible sur `http://localhost:4200`.
+Site : http://localhost:4200
 
-### 3️⃣ PostgreSQL avec Docker (profil prod)
+**3. (Optionnel) PostgreSQL avec Docker — profil prod**
 ```bash
 docker compose up -d
 # Premier lancement uniquement (charge les données de démonstration) :
@@ -96,35 +67,32 @@ SPRING_PROFILES_ACTIVE=prod SQL_INIT_MODE=always ./mvnw spring-boot:run -f backe
 SPRING_PROFILES_ACTIVE=prod ./mvnw spring-boot:run -f backend/pom.xml
 ```
 
-### 🔐 Comptes de démonstration
+## 🌍 Mise en ligne
 
-| Rôle | Email | Mot de passe | Accès |
-|------|-------|--------------|-------|
-| **Administrateur** | `admin@pharmasync.com` | `admin123` | Gestion pharmacies, catalogue |
-| **Pharmacien** | `pharmacien@pharmasync.com` | `pharma123` | Dashboard, stocks, POS |
-| **Patient** | `patient@gmail.com` | `patient123` | Recherche, réservations |
+Le projet se déploie gratuitement sur **Render** grâce aux fichiers `render.yaml` et `backend/Dockerfile`.
+Guide pas à pas : **[DEPLOIEMENT.md](DEPLOIEMENT.md)**.
 
-### 📁 Structure du projet
+## 🔐 Comptes de démonstration
+
+| Rôle | E-mail | Mot de passe |
+|---|---|---|
+| Administrateur | admin@pharmasync.com | admin123 |
+| Pharmacien | pharmacien@pharmasync.com | pharma123 |
+| Patient | patient@gmail.com | patient123 |
+
+## 📊 Données de démonstration
+
+Les **6 pharmacies** sont réelles (nom, adresse, téléphone et position relevés sur Google Maps, septembre 2026) :
+Pharmacie du Salut, Pharmacie Béguinage, Pharmacie La Place, Pharmacie La Vaillance, Pharmacie du Sacré-Cœur, Dépôt pharmaceutique Al-Salama.
+Les **stocks, prix, réservations et gardes** sont des données de démonstration.
+
+## 📁 Structure
+
 ```
-gestion_parmacie/
-├── backend/          # API REST Spring Boot
-├── frontend/         # Application Angular PWA
-├── docker-compose.yml
-├── .env.example      # Variables d'environnement
-├── MEMOIRE_PFE.md
-├── PROJET_PFE_FINAL.md
-└── RESUME_PROJET.md
+├── backend/          API REST Spring Boot (+ Dockerfile)
+├── frontend/         Application Angular (PWA)
+├── render.yaml       Déploiement Render
+├── DEPLOIEMENT.md    Guide de mise en ligne
+├── CORRECTIONS.md    Historique des corrections
+└── docker-compose.yml
 ```
-
-### ⚙️ Configuration
-Copiez `.env.example` vers `.env` pour personnaliser les variables (JWT, PostgreSQL, CORS).
-
----
-
-## 📚 Documentation complémentaire
-- [Cahier des charges](PROJET_PFE_FINAL.md)
-- [Structure du mémoire](MEMOIRE_PFE.md)
-- [Résumé exécutif](RESUME_PROJET.md)
-- [README Frontend](frontend/README.md)
-# gestion-pharmace
-# gestion-pharmace
